@@ -116,7 +116,6 @@ frameLeft.pack()
 mX = MotorLine(frameLeft, '16TEST1:m9', 3)
 mY = MotorLine(frameLeft, '16TEST1:m10', 3)
 mZ = MotorLine(frameLeft, '16TEST1:m11', 3)
-asdf
 
 
 
