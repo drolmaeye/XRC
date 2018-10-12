@@ -10,7 +10,7 @@ import tkMessageBox
 import tkFont
 from epics import *
 import time
-import os.path
+import os
 
 
 # define classes
@@ -18,7 +18,7 @@ class MotorLine:
 
     def __init__(self, master, motor, heading=False):
 
-        self.frame = Frame(master)
+        self.frame = Frame(master, pady=5)
         self.frame.pack()
 
         # secondary frame to hold the tweak presets
@@ -26,8 +26,8 @@ class MotorLine:
         self.tweak_frame.grid(row=2, column=3)
 
         # make fonts for various use
-        small_font = tkFont.Font(size=8)
-        medium_font = tkFont.Font(size=12)
+        # small_font = tkFont.Font(size=8)
+        # medium_font = tkFont.Font(size=12)
 
         # create EPICS motor
         self.axis = Motor(motor)
@@ -88,7 +88,7 @@ class MotorLine:
         self.desc_label.grid(row=1, column=0, padx=5, pady=2)
         self.rbv_label.grid(row=1, column=1, padx=5, pady=2)
         self.val_entry.grid(row=1, column=2, padx=5, pady=2)
-        self.twv_entry.grid(row=1, column=3, padx=5, pady=2)
+        self.twv_entry.grid(row=1, column=3, padx=25, pady=2)
         self.twv2_button.pack(side=LEFT)
         self.twv5_button.pack(side=LEFT)
         self.twv10_button.pack(side=LEFT)
@@ -136,6 +136,104 @@ class MotorLine:
             invalid_entry()
 
 
+class DiamondCorrection:
+
+    def __init__(self, master):
+
+        self.frame = Frame(master, pady=5)
+        self.frame.pack()
+
+        # define instance variables
+        self.x_sample = DoubleVar()
+        self.x_table = DoubleVar()
+        self.t_diamond = DoubleVar()
+        self.x_final = DoubleVar()
+        self.y_final = DoubleVar()
+        self.z_final = DoubleVar()
+
+        # make widgets
+        self.diamond_heading = Label(self.frame, text='Diamond Correction', font=large_font)
+        self.step1_label = Label(self.frame, text='Step 1', font=large_font, relief=RAISED)
+        self.x_sample_instructions = Label(self.frame, text='Focus on sample')
+        self.x_sample_label = Label(self.frame, textvariable=self.x_sample, font=medium_font, width=10, relief=SUNKEN)
+        self.x_sample_button = Button(self.frame, text='Get Positions', command=self.get_x_sample)
+
+        self.step2_label = Label(self.frame, text='Step 2', font=large_font, relief=RAISED)
+        self.x_table_instructions = Label(self.frame, text='Focus on table')
+        self.x_table_label = Label(self.frame, textvariable=self.x_table, font=medium_font, width=10, relief=SUNKEN)
+        self.x_table_button = Button(self.frame, text='Get Positions', command=self.get_x_table)
+
+        self.step3_label = Label(self.frame, text='Step 3', font=large_font, relief=RAISED)
+        self.send_instructions = Label(self.frame, text='Send positions to')
+        self.send_printer_button = Button(self.frame, text='Printer', command=self.send_to_printer)
+        self.send_beamline_button = Button(self.frame, text='Beamline', command=self.send_to_beamline)
+
+        self.x_ray_positions_heading = Label(self.frame, text='X-ray Positions', font=large_font)
+        self.positions_final_label = Label(self.frame, text='(x, y, z)', font=italic_font)
+        self.x_final_display = Label(self.frame, textvariable=self.x_final, font=medium_font, width=10, relief=SUNKEN)
+        self.y_final_display = Label(self.frame, textvariable=self.y_final, font=medium_font, width=10, relief=SUNKEN)
+        self.z_final_display = Label(self.frame, textvariable=self.z_final, font=medium_font, width=10, relief=SUNKEN)
+
+        # place widgets
+        self.diamond_heading.grid(row=0, column=0, columnspan=4)
+        self.step1_label.grid(row=1, column=0, padx=5, pady=5)
+        self.x_sample_instructions.grid(row=1, column=1, padx=5, pady=5)
+        self.x_sample_label.grid(row=1, column=2, padx=5, pady=5)
+        self.x_sample_button.grid(row=1, column=3, padx=5, pady=5)
+
+        self.step2_label.grid(row=2, column=0, padx=5, pady=5)
+        self.x_table_instructions.grid(row=2, column=1, padx=5, pady=5)
+        self.x_table_label.grid(row=2, column=2, padx=5, pady=5)
+        self.x_table_button.grid(row=2, column=3, padx=5, pady=5)
+
+        self.step3_label.grid(row=3, column=0, padx=5, pady=5)
+        self.send_instructions.grid(row=3, column=1, padx=5, pady=5)
+        self.send_printer_button.grid(row=3, column=2, padx=5, pady=5)
+        self.send_beamline_button.grid(row=3, column=3, padx=5, pady=5)
+        
+        self.x_ray_positions_heading.grid(row=4, column=0, columnspan=4)
+        self.positions_final_label.grid(row=5, column=0)
+        self.x_final_display.grid(row=5, column=1)
+        self.y_final_display.grid(row=5, column=2)
+        self.z_final_display.grid(row=5, column=3)
+
+    def get_x_sample(self):
+        self.x_sample.set('%.3f' % mX.axis.get('RBV'))
+        self.x_table.set('')
+        self.x_final.set('')
+        self.y_final.set('%.3f' % mY.axis.get('RBV'))
+        self.z_final.set('%.3f' % mZ.axis.get('RBV'))
+
+    def get_x_table(self):
+        self.x_table.set('%.3f' % mX.axis.get('RBV'))
+        correction = (self.x_sample.get() - self.x_table.get())*1.417
+        self.x_final.set('%.3f' % (self.x_sample.get() + correction))
+
+    def send_to_printer(self):
+        print 'to printer'
+        time_stamp = time.strftime('%d %b %Y %H:%M:%S',
+                                   time.localtime())
+        header_list = ['{:20}'.format('Timestamp'), '{:>7}'.format('X'),
+                       '{:>7}'.format('Y'), '{:>7}'.format('Z')]
+        header = ' '.join(header_list)
+        line_list = ['{:20}'.format(time_stamp), '{: 7.3f}'.format(self.x_final.get()),
+                     '{: 7.3f}'.format(self.y_final.get()), '{: 7.3f}'.format(self.z_final.get())]
+        line = ' '.join(line_list)
+        textfile = open('C:/Python27/Jgrams/XRC/positions.txt', 'w')
+        textfile.write(header + '\n')
+        textfile.write(line + '\n')
+        textfile.close()
+        os.startfile('C:/Python27/Jgrams/XRC/positions.txt', 'print')
+
+    def send_to_beamline(self):
+        print 'to beamline'
+
+
+
+
+
+
+
 # define generic functions
 def limits_warn():
     tkMessageBox.showwarning('Limits Violation',
@@ -159,15 +257,22 @@ Program start, define primary UI
 root = Tk()
 root.title('DACalign')
 
-frameLeft = Frame(root, relief=RIDGE)
+small_font = tkFont.Font(size=8)
+medium_font = tkFont.Font(size=12)
+italic_font = tkFont.Font(size=14, slant='italic')
+large_font = tkFont.Font(size=16)
+
+frameLeft = Frame(root, bd=5, relief=RIDGE, padx=15)
 frameLeft.pack(side=LEFT)
 
-frameRight = Frame(root, relief=RIDGE)
-frameRight.pack(side=LEFT)
+frameRight = Frame(root, bd=5, relief=RIDGE, padx=15)
+frameRight.pack(side=LEFT, fill=Y)
 
 mX = MotorLine(frameLeft, '16TEST1:m9', heading=True)
 mY = MotorLine(frameLeft, '16TEST1:m10')
 mZ = MotorLine(frameLeft, '16TEST1:m11')
+
+diamond = DiamondCorrection(frameRight)
 
 
 
