@@ -23,7 +23,7 @@ class MotorLine:
 
         # secondary frame to hold the tweak presets
         self.tweak_frame = Frame(self.frame)
-        self.tweak_frame.grid(row=2, column=3)
+        self.tweak_frame.grid(row=3, column=3)
 
         # make fonts for various use
         # small_font = tkFont.Font(size=8)
@@ -51,20 +51,22 @@ class MotorLine:
 
         # set up column headings if needed
         if heading:
+            self.motion_head = Label(self.frame, text='Alignment Stage Control', font=large_font)
             self.desc_head = Label(self.frame, text='Stage', font=medium_font)
             self.rbv_head = Label(self.frame, text='Readback', font=medium_font)
             self.val_head = Label(self.frame, text='Drive', font=medium_font)
             self.twv_head = Label(self.frame, text='Tweak Step', font=medium_font)
             self.twk_head = Label(self.frame, text='Tweak', font=medium_font)
 
-            self.desc_head.grid(row=0, column=0, padx=5, pady=2, sticky='w')
-            self.rbv_head.grid(row=0, column=1, padx=5, pady=2, sticky='e')
-            self.val_head.grid(row=0, column=2, padx=5, pady=2, sticky='w')
-            self.twv_head.grid(row=0, column=3, padx=5, pady=2)
-            self.twk_head.grid(row=0, column=4, columnspan=2, padx=5, pady=2)
+            self.motion_head.grid(row=0, column=0, columnspan=6)
+            self.desc_head.grid(row=1, column=0, padx=5, pady=2, sticky='w')
+            self.rbv_head.grid(row=1, column=1, padx=5, pady=2, sticky='e')
+            self.val_head.grid(row=1, column=2, padx=5, pady=2, sticky='w')
+            self.twv_head.grid(row=1, column=3, padx=5, pady=2)
+            self.twk_head.grid(row=1, column=4, columnspan=2, padx=5, pady=2)
 
         # make display line widgets
-        self.desc_label = Label(self.frame, textvariable=self.desc, font=medium_font, width=10, anchor='w')
+        self.desc_label = Label(self.frame, textvariable=self.desc, font=medium_font, width=15, anchor='w')
         self.rbv_label = Label(self.frame, textvariable=self.rbv, font=medium_font, width=10, anchor='e')
         self.val_entry = Entry(self.frame, textvariable=self.val, font=medium_font, width=10)
         self.twv_entry = Entry(self.frame, textvariable=self.twv, font=medium_font, width=10)
@@ -80,8 +82,10 @@ class MotorLine:
                                     command=lambda: self.twv_preset_set(0.100))
         self.twv500_button = Button(self.tweak_frame, text='500', font=small_font, bg='blue', fg='white',
                                     command=lambda: self.twv_preset_set(0.500))
-        self.twr_button = Button(self.frame, text='<', bg='light blue', font=medium_font, command=lambda: self.axis.put('TWR', 1))
-        self.twf_button = Button(self.frame, text='>', bg='light blue', font=medium_font, command=lambda: self.axis.put('TWF', 1))
+        self.twr_button = Button(self.frame, text='<', bg='light blue', font=medium_font,
+                                 command=lambda: self.axis.put('TWR', 1))
+        self.twf_button = Button(self.frame, text='>', bg='light blue', font=medium_font,
+                                 command=lambda: self.axis.put('TWF', 1))
 
         # bind entry widgets
         self.val_entry.bind('<FocusIn>', lambda event: self.val_ref.set(self.val.get()))
@@ -92,18 +96,18 @@ class MotorLine:
         self.twv_entry.bind('<Return>', self.twv_entry_validation)
 
         # place display line widgets
-        self.desc_label.grid(row=1, column=0, padx=5, pady=2)
-        self.rbv_label.grid(row=1, column=1, padx=5, pady=2)
-        self.val_entry.grid(row=1, column=2, padx=5, pady=2)
-        self.twv_entry.grid(row=1, column=3, padx=25, pady=2)
+        self.desc_label.grid(row=2, column=0, padx=5, pady=2)
+        self.rbv_label.grid(row=2, column=1, padx=5, pady=2)
+        self.val_entry.grid(row=2, column=2, padx=5, pady=2)
+        self.twv_entry.grid(row=2, column=3, padx=25, pady=2)
         self.twv2_button.pack(side=LEFT)
         self.twv5_button.pack(side=LEFT)
         self.twv10_button.pack(side=LEFT)
         self.twv50_button.pack(side=LEFT)
         self.twv100_button.pack(side=LEFT)
         self.twv500_button.pack(side=LEFT)
-        self.twr_button.grid(row=1, column=4, padx=5, pady=2)
-        self.twf_button.grid(row=1, column=5, padx=5, pady=2)
+        self.twr_button.grid(row=2, column=4, padx=5, pady=2)
+        self.twf_button.grid(row=2, column=5, padx=5, pady=2)
 
     # callbacks for monitoring PVs
     def update_rbv(self, **kwargs):
@@ -254,12 +258,12 @@ class DiamondCorrection:
 
 
 # define generic functions
-def confirm_table():
-    mY.axis.put('RLV', -0.005, wait=True)
-    root.update()
-    time.sleep(0.2)
-    mY.axis.put('RLV', 0.005, wait=True)
-
+# def confirm_table():
+#     mY.axis.put('RLV', -0.005, wait=True)
+#     root.update()
+#     time.sleep(0.2)
+#     mY.axis.put('RLV', 0.005, wait=True)
+#
 
 def origin_move():
     mX.axis.move(0.000)
@@ -300,27 +304,29 @@ medium_font = tkFont.Font(size=12)
 italic_font = tkFont.Font(size=14, slant='italic')
 large_font = tkFont.Font(size=16)
 
-frameLeft = Frame(root, bd=5, relief=RIDGE, padx=15)
-frameLeft.pack(side=LEFT, fill=Y)
-frameCenter = Frame(root, bd=5, relief=RIDGE, padx=15)
-frameCenter.pack(side=LEFT, fill=Y)
-frameRight = Frame(root, bd=5, relief=RIDGE, padx=15)
-frameRight.pack(side=LEFT, fill=Y)
+frameTop = Frame(root, bd=5, relief=RIDGE, padx=15)
+frameTop.pack(fill=X)
+frameMiddle = Frame(root, bd=5, relief=RIDGE, padx=15)
+frameMiddle.pack(fill=X)
+frameBottom = Frame(root, bd=5, relief=RIDGE, padx=15)
+frameBottom.pack()
 
-mX = MotorLine(frameLeft, '16TEST1:m9', heading=True)
-mY = MotorLine(frameLeft, '16TEST1:m10')
-mZ = MotorLine(frameLeft, '16TEST1:m11')
+mX = MotorLine(frameTop, '16TEST1:m9', heading=True)
+mY = MotorLine(frameTop, '16TEST1:m10')
+mZ = MotorLine(frameTop, '16TEST1:m11')
 
-table_jump_button = Button(frameCenter, text='Jump to\n Diamond\n Table', bg='light blue', font=medium_font, width=10,
+diamond = DiamondCorrection(frameMiddle)
+
+origin_set_button = Button(frameBottom, text='Set as\n Origin', bg='light blue', font=medium_font, width=10,
+                           command=origin_set)
+origin_set_button.grid(row=0, column=0, padx=45, pady=15)
+origin_move_button = Button(frameBottom, text='Move to\n Origin', bg='light blue', font=medium_font, width=10,
+                            command=origin_move)
+origin_move_button.grid(row=0, column=1, padx=45, pady=15)
+table_jump_button = Button(frameBottom, text='Jump to\n Diamond\n Table', bg='light blue', font=medium_font, width=10,
                            command=lambda: mX.axis.put('RLV', -0.900))
-table_jump_button.grid(row=0, column=0, pady=15)
-confirm_table_button = Button(frameCenter, text='Confirm\n Table', bg='light blue', font=medium_font, width=10, command=confirm_table)
-# confirm_table_button.grid(row=1, column=0, pady=10)
-origin_move_button = Button(frameCenter, text='Move to\n Origin', bg='light blue', font=medium_font, width=10, command=origin_move)
-origin_move_button.grid(row=1, column=0, pady=15)
-origin_set_button = Button(frameCenter, text='Set as\n Origin', bg='light blue', font=medium_font, width=10, command=origin_set)
-origin_set_button.grid(row=2, column=0, pady=15)
+table_jump_button.grid(row=0, column=2, padx=45, pady=15)
 
-diamond = DiamondCorrection(frameRight)
+
 
 root.mainloop()
