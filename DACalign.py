@@ -1,7 +1,7 @@
 __author__ = 'j.smith'
 
 '''
-A GUI saple viewing, alignment, and diamond calculation correction
+A GUI for sample viewing, alignment, and diamond calculation correction
 '''
 
 # import necessary modules, etc
@@ -68,13 +68,20 @@ class MotorLine:
         self.rbv_label = Label(self.frame, textvariable=self.rbv, font=medium_font, width=10, anchor='e')
         self.val_entry = Entry(self.frame, textvariable=self.val, font=medium_font, width=10)
         self.twv_entry = Entry(self.frame, textvariable=self.twv, font=medium_font, width=10)
-        self.twv2_button = Button(self.tweak_frame, text='2', font=small_font, bg='blue', fg='white', command=lambda: self.axis.put('TWV', 0.002))
-        self.twv5_button = Button(self.tweak_frame, text='5', font=small_font, bg='blue', fg='white', command=lambda: self.axis.put('TWV', 0.005))
-        self.twv10_button = Button(self.tweak_frame, text='10', font=small_font, bg='blue', fg='white', command=lambda: self.axis.put('TWV', 0.010))
-        self.twv25_button = Button(self.tweak_frame, text='25', font=small_font, bg='blue', fg='white', command=lambda: self.axis.put('TWV', 0.025))
-        self.twv100_button = Button(self.tweak_frame, text='100', font=small_font, bg='blue', fg='white', command=lambda: self.axis.put('TWV', 0.100))
-        self.twr_button = Button(self.frame, text='<', font=medium_font, command=lambda: self.axis.put('TWR', 1))
-        self.twf_button = Button(self.frame, text='>', font=medium_font, command=lambda: self.axis.put('TWF', 1))
+        self.twv2_button = Button(self.tweak_frame, text='2', font=small_font, bg='blue', fg='white',
+                                  command=lambda: self.twv_preset_set(0.002))
+        self.twv5_button = Button(self.tweak_frame, text='5', font=small_font, bg='blue', fg='white',
+                                  command=lambda: self.twv_preset_set(0.005))
+        self.twv10_button = Button(self.tweak_frame, text='10', font=small_font, bg='blue', fg='white',
+                                   command=lambda: self.twv_preset_set(0.010))
+        self.twv50_button = Button(self.tweak_frame, text='50', font=small_font, bg='blue', fg='white',
+                                   command=lambda: self.twv_preset_set(0.050))
+        self.twv100_button = Button(self.tweak_frame, text='100', font=small_font, bg='blue', fg='white',
+                                    command=lambda: self.twv_preset_set(0.100))
+        self.twv500_button = Button(self.tweak_frame, text='500', font=small_font, bg='blue', fg='white',
+                                    command=lambda: self.twv_preset_set(0.500))
+        self.twr_button = Button(self.frame, text='<', bg='light blue', font=medium_font, command=lambda: self.axis.put('TWR', 1))
+        self.twf_button = Button(self.frame, text='>', bg='light blue', font=medium_font, command=lambda: self.axis.put('TWF', 1))
 
         # bind entry widgets
         self.val_entry.bind('<FocusIn>', lambda event: self.val_ref.set(self.val.get()))
@@ -92,11 +99,13 @@ class MotorLine:
         self.twv2_button.pack(side=LEFT)
         self.twv5_button.pack(side=LEFT)
         self.twv10_button.pack(side=LEFT)
-        self.twv25_button.pack(side=LEFT)
+        self.twv50_button.pack(side=LEFT)
         self.twv100_button.pack(side=LEFT)
+        self.twv500_button.pack(side=LEFT)
         self.twr_button.grid(row=1, column=4, padx=5, pady=2)
         self.twf_button.grid(row=1, column=5, padx=5, pady=2)
 
+    # callbacks for monitoring PVs
     def update_rbv(self, **kwargs):
         self.rbv.set('%.3f' % self.axis.get('RBV'))
 
@@ -106,6 +115,7 @@ class MotorLine:
     def update_twv(self, **kwargs):
         self.twv.set('%.3f' % self.axis.get('TWV'))
 
+    # validations functions
     def val_entry_validation(self, event):
         # value must be float
         # value must lie within motor limits
@@ -135,6 +145,10 @@ class MotorLine:
             self.twv.set('%.3f' % self.twv_ref.get())
             invalid_entry()
 
+    def twv_preset_set(self, twv):
+        self.twv_ref.set('%.3f' % twv)
+        self.axis.put('TWV', twv)
+
 
 class DiamondCorrection:
 
@@ -150,59 +164,71 @@ class DiamondCorrection:
         self.x_final = DoubleVar()
         self.y_final = DoubleVar()
         self.z_final = DoubleVar()
+        self.sample_name = StringVar()
 
         # make widgets
         self.diamond_heading = Label(self.frame, text='Diamond Correction', font=large_font)
-        self.step1_label = Label(self.frame, text='Step 1', font=large_font, relief=RAISED)
-        self.x_sample_instructions = Label(self.frame, text='Focus on sample')
-        self.x_sample_label = Label(self.frame, textvariable=self.x_sample, font=medium_font, width=10, relief=SUNKEN)
-        self.x_sample_button = Button(self.frame, text='Get Positions', command=self.get_x_sample)
-
-        self.step2_label = Label(self.frame, text='Step 2', font=large_font, relief=RAISED)
-        self.x_table_instructions = Label(self.frame, text='Focus on table')
-        self.x_table_label = Label(self.frame, textvariable=self.x_table, font=medium_font, width=10, relief=SUNKEN)
-        self.x_table_button = Button(self.frame, text='Get Positions', command=self.get_x_table)
-
-        self.step3_label = Label(self.frame, text='Step 3', font=large_font, relief=RAISED)
-        self.send_instructions = Label(self.frame, text='Send positions to')
-        self.send_printer_button = Button(self.frame, text='Printer', command=self.send_to_printer)
-        self.send_beamline_button = Button(self.frame, text='Beamline', command=self.send_to_beamline)
-
+        self.step1_label = Label(self.frame, text='Step 1', font=large_font)
+        self.x_sample_instructions = Label(self.frame, text='Focus on sample', font=medium_font)
+        self.x_sample_label = Label(self.frame, textvariable=self.x_sample, font=medium_font, width=11, relief=SUNKEN)
+        self.x_sample_button = Button(self.frame, text='Get Positions', bg='light blue', font=medium_font, width=11,
+                                      command=self.get_x_sample)
+        self.step2_label = Label(self.frame, text='Step 2', font=large_font)
+        self.x_table_instructions = Label(self.frame, text='Focus on table', font=medium_font)
+        self.x_table_label = Label(self.frame, textvariable=self.x_table, font=medium_font, width=11, relief=SUNKEN)
+        self.x_table_button = Button(self.frame, text='Get Positions', bg='light blue', font=medium_font, width=11,
+                                     command=self.get_x_table)
+        self.step3_label = Label(self.frame, text='Step 3', font=large_font)
+        self.send_instructions = Label(self.frame, text='Send positions to', font=medium_font)
+        self.send_printer_button = Button(self.frame, text='Printer', bg='light blue', font=medium_font, width=11,
+                                          command=self.send_to_printer)
+        self.send_beamline_button = Button(self.frame, text='Beamline', bg='light blue', font=medium_font, width=11,
+                                           command=self.send_to_beamline)
         self.x_ray_positions_heading = Label(self.frame, text='X-ray Positions', font=large_font)
         self.positions_final_label = Label(self.frame, text='(x, y, z)', font=italic_font)
-        self.x_final_display = Label(self.frame, textvariable=self.x_final, font=medium_font, width=10, relief=SUNKEN)
-        self.y_final_display = Label(self.frame, textvariable=self.y_final, font=medium_font, width=10, relief=SUNKEN)
-        self.z_final_display = Label(self.frame, textvariable=self.z_final, font=medium_font, width=10, relief=SUNKEN)
+        self.x_final_display = Label(self.frame, textvariable=self.x_final, bg='light green',
+                                     font=medium_font, width=11, relief=SUNKEN)
+        self.y_final_display = Label(self.frame, textvariable=self.y_final, bg='light green',
+                                     font=medium_font, width=11, relief=SUNKEN)
+        self.z_final_display = Label(self.frame, textvariable=self.z_final, bg='light green',
+                                     font=medium_font, width=11, relief=SUNKEN)
+
+        self.sample_name_label = Label(self.frame, text='Sample name', font=medium_font)
+        self.sample_name_entry = Entry(self.frame, textvariable=self.sample_name, font=medium_font, width=38)
 
         # place widgets
         self.diamond_heading.grid(row=0, column=0, columnspan=4)
         self.step1_label.grid(row=1, column=0, padx=5, pady=5)
-        self.x_sample_instructions.grid(row=1, column=1, padx=5, pady=5)
+        self.x_sample_instructions.grid(row=1, column=1, padx=5, pady=5, sticky=W)
         self.x_sample_label.grid(row=1, column=2, padx=5, pady=5)
         self.x_sample_button.grid(row=1, column=3, padx=5, pady=5)
 
         self.step2_label.grid(row=2, column=0, padx=5, pady=5)
-        self.x_table_instructions.grid(row=2, column=1, padx=5, pady=5)
+        self.x_table_instructions.grid(row=2, column=1, padx=5, pady=5, sticky=W)
         self.x_table_label.grid(row=2, column=2, padx=5, pady=5)
         self.x_table_button.grid(row=2, column=3, padx=5, pady=5)
 
         self.step3_label.grid(row=3, column=0, padx=5, pady=5)
-        self.send_instructions.grid(row=3, column=1, padx=5, pady=5)
+        self.send_instructions.grid(row=3, column=1, padx=5, pady=5, sticky=W)
         self.send_printer_button.grid(row=3, column=2, padx=5, pady=5)
         self.send_beamline_button.grid(row=3, column=3, padx=5, pady=5)
         
-        self.x_ray_positions_heading.grid(row=4, column=0, columnspan=4)
+        self.x_ray_positions_heading.grid(row=4, column=0, columnspan=4, pady=5)
         self.positions_final_label.grid(row=5, column=0)
         self.x_final_display.grid(row=5, column=1)
         self.y_final_display.grid(row=5, column=2)
         self.z_final_display.grid(row=5, column=3)
 
+        self.sample_name_label.grid(row=6, column=0, pady=10)
+        self.sample_name_entry.grid(row=6, column=1, columnspan=3, pady=10)
+
     def get_x_sample(self):
         self.x_sample.set('%.3f' % mX.axis.get('RBV'))
         self.x_table.set('')
-        self.x_final.set('')
+        self.x_final.set('%.3f' % mX.axis.get('RBV'))
         self.y_final.set('%.3f' % mY.axis.get('RBV'))
         self.z_final.set('%.3f' % mZ.axis.get('RBV'))
+        self.sample_name.set('')
 
     def get_x_table(self):
         self.x_table.set('%.3f' % mX.axis.get('RBV'))
@@ -210,31 +236,47 @@ class DiamondCorrection:
         self.x_final.set('%.3f' % (self.x_sample.get() + correction))
 
     def send_to_printer(self):
-        print 'to printer'
-        time_stamp = time.strftime('%d %b %Y %H:%M:%S',
-                                   time.localtime())
-        header_list = ['{:20}'.format('Timestamp'), '{:>7}'.format('X'),
-                       '{:>7}'.format('Y'), '{:>7}'.format('Z')]
-        header = ' '.join(header_list)
-        line_list = ['{:20}'.format(time_stamp), '{: 7.3f}'.format(self.x_final.get()),
-                     '{: 7.3f}'.format(self.y_final.get()), '{: 7.3f}'.format(self.z_final.get())]
-        line = ' '.join(line_list)
-        textfile = open('C:/Python27/Jgrams/XRC/positions.txt', 'w')
-        textfile.write(header + '\n')
-        textfile.write(line + '\n')
+        # ###print 'to printer'
+        line1 = '\n' + 'Timestamp: ' + time.strftime('%d %b %Y %H:%M:%S', time.localtime()) + '\n\n'
+        line2 = 'Sample name: ' + self.sample_name.get() + '\n\n'
+        line3 = 'X:' + '{:7.3f}'.format(self.x_final.get()) + '\n'
+        line4 = 'Y:' + '{:7.3f}'.format(self.y_final.get()) + '\n'
+        line5 = 'Z:' + '{:7.3f}'.format(self.z_final.get()) + '\n'
+        textfile = open('C:/Python27/Positions.txt', 'w')
+        textfile.write(line1 + line2 + line3 + line4 + line5)
         textfile.close()
-        os.startfile('C:/Python27/Jgrams/XRC/positions.txt', 'print')
+        os.startfile('C:/Python27/Positions.txt', 'print')
 
     def send_to_beamline(self):
-        print 'to beamline'
-
-
-
-
-
+        tkMessageBox.showinfo('Under Construction',
+                              'Feature not yet available\n\n'
+                              'Please print or write down your sample positions')
 
 
 # define generic functions
+def confirm_table():
+    mY.axis.put('RLV', -0.005, wait=True)
+    root.update()
+    time.sleep(0.2)
+    mY.axis.put('RLV', 0.005, wait=True)
+
+
+def origin_move():
+    mX.axis.move(0.000)
+    mY.axis.move(0.000)
+    mZ.axis.move(0.000)
+
+
+def origin_set():
+    confirm = tkMessageBox.askyesno('Confirm action',
+                                    'Make sure the image of the crosshair is in focus before proceeding.\n\n'
+                                    'Are you sure you want to define the current position as the origin?')
+    if confirm:
+        mX.axis.set_position(0.000)
+        mY.axis.set_position(0.000)
+        mZ.axis.set_position(0.000)
+
+
 def limits_warn():
     tkMessageBox.showwarning('Limits Violation',
                              'Target position(s) exceeds motor limits\n'
@@ -245,10 +287,6 @@ def invalid_entry():
     # generic pop-up notification for invalid text entries
     tkMessageBox.showwarning('Invalid Entry',
                              message='Input was reset to default value')
-
-
-
-
 
 
 '''
@@ -263,8 +301,9 @@ italic_font = tkFont.Font(size=14, slant='italic')
 large_font = tkFont.Font(size=16)
 
 frameLeft = Frame(root, bd=5, relief=RIDGE, padx=15)
-frameLeft.pack(side=LEFT)
-
+frameLeft.pack(side=LEFT, fill=Y)
+frameCenter = Frame(root, bd=5, relief=RIDGE, padx=15)
+frameCenter.pack(side=LEFT, fill=Y)
 frameRight = Frame(root, bd=5, relief=RIDGE, padx=15)
 frameRight.pack(side=LEFT, fill=Y)
 
@@ -272,8 +311,16 @@ mX = MotorLine(frameLeft, '16TEST1:m9', heading=True)
 mY = MotorLine(frameLeft, '16TEST1:m10')
 mZ = MotorLine(frameLeft, '16TEST1:m11')
 
+table_jump_button = Button(frameCenter, text='Jump to\n Diamond\n Table', bg='light blue', font=medium_font, width=10,
+                           command=lambda: mX.axis.put('RLV', -0.900))
+table_jump_button.grid(row=0, column=0, pady=15)
+confirm_table_button = Button(frameCenter, text='Confirm\n Table', bg='light blue', font=medium_font, width=10, command=confirm_table)
+# confirm_table_button.grid(row=1, column=0, pady=10)
+origin_move_button = Button(frameCenter, text='Move to\n Origin', bg='light blue', font=medium_font, width=10, command=origin_move)
+origin_move_button.grid(row=1, column=0, pady=15)
+origin_set_button = Button(frameCenter, text='Set as\n Origin', bg='light blue', font=medium_font, width=10, command=origin_set)
+origin_set_button.grid(row=2, column=0, pady=15)
+
 diamond = DiamondCorrection(frameRight)
-
-
 
 root.mainloop()
