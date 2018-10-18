@@ -327,6 +327,4 @@ table_jump_button = Button(frameBottom, text='Jump to\n Diamond\n Table', bg='li
                            command=lambda: mX.axis.put('RLV', -0.900))
 table_jump_button.grid(row=0, column=2, padx=45, pady=15)
 
-
-
 root.mainloop()
