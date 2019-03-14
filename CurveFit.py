@@ -8,6 +8,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 from scipy import exp, asarray
 from math import cos, sin, radians, pi, sqrt
+import time
 
 style.use('dark_background')
 
@@ -48,8 +49,14 @@ def pseudo(x, a, c, eta, w, m, bg):
                  (1 - eta) * (sqrt(4 * np.log(2)) / (sqrt(pi) * w)) * exp(
                 -(4 * np.log(2) / w ** 2) * (x - c) ** 2)) + m * x + bg
 
-print np.argmax(yra)
-print xra[np.argmax(yra)]
+start = time.clock()
+fred = np.argmax(yra)
+charles = xra[np.argmax(yra)]
+end = time.clock()
+print end - start, 'wow!'
+print fred
+print charles
+
 
 slope = (yra[-1] - yra[0]) / (xra[-1] - xra[0])
 intercept = yra[0] - slope * xra[0]
@@ -65,6 +72,7 @@ p0 = [r2_h, r2, 0.5, 1.0, r1_h, r1, 0.5, 1.0, slope, intercept]
 # popt, pcov = curve_fit(double_gauss, xra, yra, p0=[1000.0, 699.0, 1.0, 2000.0, 700.0, 1.0, -1.0, 3000.0])
 popt, pcov = curve_fit(double_pseudo, xra, yra, p0=p0)
 
+
 print popt
 print p0
 
@@ -73,6 +81,15 @@ for each in range(10):
     print dif
 # ax1.plot(xra, double_gauss(xra, *popt), 'ro')
 
+alpha = 1904
+beta = 9.5
+lambda0 = 694.300
+
+P = alpha * ((1/beta)*(((popt[5]/lambda0) ** beta) - 1))
+print P
+
+
+
 
 
 ax1.plot(xra, yra)
@@ -80,5 +97,7 @@ ax1.plot(xra, double_pseudo(xra, *popt), 'ro')
 ax1.plot(xra, pseudo(xra, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9]))
 ax1.plot(xra, pseudo(xra, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
 ax1.plot(xra, (popt[8]*xra + popt[9]))
+
+
 
 plt.show()
