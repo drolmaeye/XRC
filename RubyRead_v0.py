@@ -28,7 +28,7 @@ import time
 
 devices = sb.list_devices()
 spec = sb.Spectrometer(devices[0])
-spec.integration_time_micros(20000)
+spec.integration_time_micros(1000000)
 
 xs = spec.wavelengths()
 ys = spec.intensities()
@@ -94,7 +94,7 @@ def start_timer():
     if stoppage:
         stoppage = False
         timer.timeout.connect(update)
-        timer.start(1000)
+        timer.start(1)
     else:
         stoppage = True
         timer.stop()
@@ -102,7 +102,8 @@ def start_timer():
 
 
 def update():
-    global curve, ptr, p1
+    global  ptr, p1, curve
+    print 'started'
     ys = spec.intensities()
     curve.setData(xs, ys)
     if ptr == 0:
