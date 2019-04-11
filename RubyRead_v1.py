@@ -11,7 +11,9 @@ import numpy as np
 import pyqtgraph as pg
 import seabreeze.spectrometers as sb
 import time
-
+from scipy.optimize import curve_fit
+from scipy import exp, asarray
+from math import cos, sin, radians, pi, sqrt
 
 
 class Window(QtGui.QMainWindow):
@@ -135,6 +137,47 @@ class Window(QtGui.QMainWindow):
         self.press_control.setTitle('Pressure Control')
         self.cw_layout.addWidget(self.press_control)
 
+        # make and add layout to Pressure Control QGroupBox
+        self.press_control_layout = QtGui.QGridLayout()
+        self.press_control_layout.setAlignment(QtCore.Qt.AlignTop)
+        self.press_control.setLayout(self.press_control_layout)
+
+        # ###make and add individual widgets to press control layout
+
+        # create, configure, and add lambda naught label and input
+        self.lambda_naught_label = QtGui.QLabel('R1 lambda naught (nm)')
+        self.lambda_naught_input = QtGui.QLineEdit('694.290')
+        self.lambda_naught_input.setValidator(QtGui.QDoubleValidator(694.200, 694.400, 3))
+        self.press_control_layout.addWidget(self.lambda_naught_label, 0, 0)
+        self.press_control_layout.addWidget(self.lambda_naught_input, 0, 1)
+
+        # create, configure, add pointer widget
+        self.pointer_position_label = QtGui.QLabel('Pointer position')
+        self.pointer_position_input = QtGui.QLineEdit('694.290')
+        self.pointer_position_input.setValidator(QtGui.QDoubleValidator(670.000, 770.000, 3))
+        self.press_control_layout.addWidget(self.pointer_position_label, 1, 0)
+        self.press_control_layout.addWidget(self.pointer_position_input, 1, 1)
+
+        # create, configure, add calibration label
+        self.press_calibration_label1 = QtGui.QLabel('Pressure Calibration')
+        self.press_calibration_label2 = QtGui.QLabel('Mao et al 1986')
+        self.press_control_layout.addWidget(self.press_calibration_label1, 2, 0)
+        self.press_control_layout.addWidget(self.press_calibration_label2, 2, 1)
+
+        # create, configure, add sample temperature widgets
+        self.temperature_label = QtGui.QLabel('Temperature (K)')
+        self.temperature_input = QtGui.QLineEdit('300')
+        self.temperature_track_cbox = QtGui.QCheckBox('Track')
+        self.press_control_layout.addWidget(self.temperature_label, 3, 0)
+        self.press_control_layout.addWidget(self.temperature_input, 3, 1)
+        self.press_control_layout.addWidget(self.temperature_track_cbox, 3, 2)
+
+        # create, configure, add pressure calc widgets
+        self.press_calc_label1 = QtGui.QLabel('P(calculated) (GPa)')
+        self.press_calc_label2 = QtGui.QLabel('0.00')
+        self.press_control_layout.addWidget(self.press_calc_label1, 4, 0)
+        self.press_control_layout.addWidget(self.press_calc_label2, 4, 1)
+
         self.show()
 
     def count_time_shortcut(self, count):
@@ -158,6 +201,15 @@ class CoreData:
 
         self.timer = QtCore.QTimer()
 
+        # pressure calculation parameters
+        self.alpha = 1904
+        self.beta = 9.5
+        self.lambda0 = 694.290
+        self.temperature = 300
+        self.pressure = 0.00
+
+
+
 
 def start_timer(count):
     if count:
@@ -175,17 +227,54 @@ def start_timer(count):
 
 
 def update():
+    # get and plot spectra
     start = time.clock()
     core.ys = core.spec.intensities()
     if gui.average_spec_cbox.isChecked():
         num = int(gui.average_spec_input.text())
         for each in range(num - 1):
             core.ys += core.spec.intensities()
-            print core.ys[0]
         core.ys = core.ys/num
-        print core.ys[0]
     core.curve.setData(core.xs, core.ys)
-    print time.clock() - start
+
+    # start to pick values for fitting
+    slope = (core.ys[-1] - core.ys[0]) / (core.xs[-1] - core.xs[0])
+    intercept = core.ys[0] - slope * core.xs[0]
+    max_index = np.argmax(core.ys)
+    r1 = core.xs[max_index]
+    r2 = r1 - 1.4
+    r1_h = core.ys[max_index] - (slope * r1 + intercept)
+    r2_h = r1_h / 2.0
+
+    # define fitting parameters p0
+    p0 = [r2_h, r2, 0.5, 1.0, r1_h, r1, 0.5, 1.0, slope, intercept]
+
+    # fit!
+    popt, pcov = curve_fit(double_pseudo, core.xs, core.ys, p0=p0)
+
+    gui.pointer_position_input.setText('%.3f' % popt[5])
+
+    # delta T first try
+    current_temp = float(gui.temperature_input.text())
+    print current_temp
+
+
+
+    # calculate pressure (needs to be independent function)
+    core.pressure = core.alpha * ((1 / core.beta) * (((popt[5] / core.lambda0) ** core.beta) - 1))
+    gui.press_calc_label2.setText('%.2f' % core.pressure)
+    end = time.clock()
+    print end - start
+
+
+def double_pseudo(x, a1, c1, eta1, w1, a2, c2, eta2, w2, m, bg):
+    return a1 * (eta1 * (2 / pi) * (w1 / (4 * (x - c1) ** 2 + w1 ** 2)) +
+                 (1 - eta1) * (sqrt(4 * np.log(2)) / (sqrt(pi) * w1)) * exp(
+                -(4 * np.log(2) / w1 ** 2) * (x - c1) ** 2)) + \
+           a2 * (eta2 * (2 / pi) * (w2 / (4 * (x - c2) ** 2 + w2 ** 2)) +
+                 (1 - eta2) * (sqrt(4 * np.log(2)) / (sqrt(pi) * w2)) * exp(
+                -(4 * np.log(2) / w2 ** 2) * (x - c2) ** 2)) + \
+           m * x + bg
 
 
 def update_count_time():
