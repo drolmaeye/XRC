@@ -45,7 +45,6 @@ class Window(QtGui.QMainWindow):
         self.tool_bar.addAction(self.take_n_spec)
 
 
-
         # make the plot window for the left side and add it to main window layout
         self.pw = pg.PlotWidget(name='Plot1')
         self.mw_layout.addWidget(self.pw)
