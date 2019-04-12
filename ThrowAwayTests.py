@@ -1,12 +1,30 @@
 from scipy import exp, asarray
 from math import cos, sin, radians, pi, sqrt
 
-v0 = 10000000/694.290
+T = 200
 
-v = v0 - 76.6*(1/(exp(482.0/300.0)-1))
+r_one_295_reference = 694.260
 
-l = 10000000/v
+r_one_295_user = 694.200
 
-print l
+r_one_295_offset = r_one_295_user - r_one_295_reference
 
-print l - 694.290
+r_one_t_cm = 14423.0 + 0.0446*T - 0.000481*T*T + 0.000000371*T*T*T
+
+r_one_t_nm = 10000000 / r_one_t_cm
+
+print r_one_t_nm
+
+r_one_t_corrected = r_one_t_nm + r_one_295_offset
+
+print r_one_t_corrected
+
+r_one_measured = 694.200
+
+
+alpha = 1904
+beta = 7.665
+
+pressure = alpha * ((1 / beta) * (((r_one_measured / r_one_t_corrected) ** beta) - 1))
+print pressure
+

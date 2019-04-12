@@ -144,45 +144,59 @@ class Window(QtGui.QMainWindow):
 
         # ###make and add individual widgets to press control layout
 
-        # create, configure, and add lambda naught label and input
-        self.lambda_naught_label = QtGui.QLabel('R1 lambda naught (nm)')
-        self.lambda_naught_input = QtGui.QLineEdit('694.290')
-        self.lambda_naught_input.setValidator(QtGui.QDoubleValidator(694.200, 694.400, 3))
-        self.press_control_layout.addWidget(self.lambda_naught_label, 0, 0)
-        self.press_control_layout.addWidget(self.lambda_naught_input, 0, 1)
+        # create, configure, and add lambda naught (295) label and input
+        self.lambda_naught_295_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(295)' + ' (nm)')
+        self.lambda_naught_295_input = QtGui.QLineEdit()
+        self.lambda_naught_295_input.setValidator(QtGui.QDoubleValidator(694.200, 694.400, 3))
+        self.press_control_layout.addWidget(self.lambda_naught_295_label, 0, 0)
+        self.press_control_layout.addWidget(self.lambda_naught_295_input, 0, 1)
+
+        # create, configure, and add lambda naught (T) label and input
+        self.lambda_naught_t_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(T)' + ' (nm)')
+        self.lambda_naught_t_input = QtGui.QLineEdit()
+        self.lambda_naught_t_input.setValidator(QtGui.QDoubleValidator(690.000, 699.000, 3))
+        self.press_control_layout.addWidget(self.lambda_naught_t_label, 1, 0)
+        self.press_control_layout.addWidget(self.lambda_naught_t_input, 1, 1)
 
         # create, configure, add pointer widget
-        self.pointer_position_label = QtGui.QLabel('Pointer position')
-        self.pointer_position_input = QtGui.QLineEdit('694.290')
+        self.pointer_position_label = QtGui.QLabel(u'\u03BB' + '<sub>R1</sub>' + ' (nm)')
+        self.pointer_position_input = QtGui.QLineEdit()
         self.pointer_position_input.setValidator(QtGui.QDoubleValidator(670.000, 770.000, 3))
-        self.press_control_layout.addWidget(self.pointer_position_label, 1, 0)
-        self.press_control_layout.addWidget(self.pointer_position_input, 1, 1)
+        self.press_control_layout.addWidget(self.pointer_position_label, 2, 0)
+        self.press_control_layout.addWidget(self.pointer_position_input, 2, 1)
 
         # create, configure, add calibration label
         self.press_calibration_label1 = QtGui.QLabel('Pressure Calibration')
         self.press_calibration_label2 = QtGui.QLabel('Mao et al 1986')
-        self.press_control_layout.addWidget(self.press_calibration_label1, 2, 0)
-        self.press_control_layout.addWidget(self.press_calibration_label2, 2, 1)
+        self.press_control_layout.addWidget(self.press_calibration_label1, 3, 0)
+        self.press_control_layout.addWidget(self.press_calibration_label2, 3, 1)
 
         # create, configure, add sample temperature widgets
         self.temperature_label = QtGui.QLabel('Temperature (K)')
-        self.temperature_input = QtGui.QLineEdit('300')
+        self.temperature_input = QtGui.QLineEdit()
+        self.temperature_input.editingFinished.connect(calculate_lambda_0_t)
         self.temperature_track_cbox = QtGui.QCheckBox('Track')
-        self.press_control_layout.addWidget(self.temperature_label, 3, 0)
-        self.press_control_layout.addWidget(self.temperature_input, 3, 1)
-        self.press_control_layout.addWidget(self.temperature_track_cbox, 3, 2)
+        self.press_control_layout.addWidget(self.temperature_label, 4, 0)
+        self.press_control_layout.addWidget(self.temperature_input, 4, 1)
+        self.press_control_layout.addWidget(self.temperature_track_cbox, 4, 2)
 
         # create, configure, add pressure calc widgets
-        self.press_calc_label1 = QtGui.QLabel('P(calculated) (GPa)')
+        self.press_calc_label1 = QtGui.QLabel('Pressure<sub>calc</sub> (GPa)')
         self.press_calc_label2 = QtGui.QLabel('0.00')
-        self.press_control_layout.addWidget(self.press_calc_label1, 4, 0)
-        self.press_control_layout.addWidget(self.press_calc_label2, 4, 1)
+        self.press_control_layout.addWidget(self.press_calc_label1, 5, 0)
+        self.press_control_layout.addWidget(self.press_calc_label2, 5, 1)
 
         self.show()
 
     def count_time_shortcut(self, count):
         self.count_time_input.setText(count)
         core.spec.integration_time_micros(int(count)*1000)
+
+    def initialize_inputs(self):
+        self.lambda_naught_295_input.setText('%.3f' % core.lambda_0_ref)
+        self.lambda_naught_t_input.setText('%.3f' % core.lambda_0_t_user)
+        self.pointer_position_input.setText('%.3f' % core.lambda_0_ref)
+        self.temperature_input.setText('%.0f' % core.temperature)
 
 
 class CoreData:
@@ -202,10 +216,14 @@ class CoreData:
         self.timer = QtCore.QTimer()
 
         # pressure calculation parameters
+        # lambda zero (ref) is 694.260 based on Ragan et al JAP 72, 5539 (1992) at 295K
         self.alpha = 1904
         self.beta = 9.5
-        self.lambda0 = 694.290
-        self.temperature = 300
+        self.lambda_0_ref = 694.260
+        self.lambda_0_user = 694.260
+        self.lambda_0_t_user = 694.260
+        self.lambda_r1 = 694.260
+        self.temperature = 295
         self.pressure = 0.00
 
 
@@ -261,10 +279,24 @@ def update():
 
 
     # calculate pressure (needs to be independent function)
-    core.pressure = core.alpha * ((1 / core.beta) * (((popt[5] / core.lambda0) ** core.beta) - 1))
+    calculate_pressure(popt[5])
     gui.press_calc_label2.setText('%.2f' % core.pressure)
     end = time.clock()
     print end - start
+
+
+def calculate_lambda_0_t():
+    offset = core.lambda_0_user - core.lambda_0_ref
+    t = float(gui.temperature_input.text())
+    lambda_0_t = 10000000 / (14423.0 + 0.0446*t - 0.000481*t*t + 0.000000371*t*t*t)
+    core.lambda_0_t_user = lambda_0_t + offset
+    print offset, lambda_0_t
+    gui.lambda_naught_t_input.setText('%.3f' % core.lambda_0_t_user)
+    calculate_pressure(core.lambda_r1)
+
+
+def calculate_pressure(lambda_r1):
+    core.pressure = core.alpha * ((1 / core.beta) * (((lambda_r1 / core.lambda_0_t_user) ** core.beta) - 1))
 
 
 def double_pseudo(x, a1, c1, eta1, w1, a2, c2, eta2, w2, m, bg):
@@ -290,4 +322,5 @@ app = QtGui.QApplication(sys.argv)
 pg.setConfigOptions(antialias=True)
 gui = Window()
 core = CoreData()
+gui.initialize_inputs()
 sys.exit(app.exec_())
