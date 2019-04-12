@@ -173,7 +173,7 @@ class Window(QtGui.QMainWindow):
         # create, configure, add sample temperature widgets
         self.temperature_label = QtGui.QLabel('Temperature (K)')
         self.temperature_input = QtGui.QLineEdit()
-        self.temperature_input.editingFinished.connect(calculate_lambda_0_t)
+        self.temperature_input.returnPressed.connect(calculate_lambda_0_t)
         self.temperature_track_cbox = QtGui.QCheckBox('Track')
         self.press_control_layout.addWidget(self.temperature_label, 4, 0)
         self.press_control_layout.addWidget(self.temperature_input, 4, 1)
@@ -295,8 +295,9 @@ def calculate_lambda_0_t():
 
 
 def calculate_pressure(lambda_r1):
+    print core.lambda_0_t_user
     core.pressure = core.alpha * ((1 / core.beta) * (((lambda_r1 / core.lambda_0_t_user) ** core.beta) - 1))
-
+    gui.press_calc_label2.setText('%.2f' % core.pressure)
 
 def double_pseudo(x, a1, c1, eta1, w1, a2, c2, eta2, w2, m, bg):
     return a1 * (eta1 * (2 / pi) * (w1 / (4 * (x - c1) ** 2 + w1 ** 2)) +
