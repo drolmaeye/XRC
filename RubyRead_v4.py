@@ -44,9 +44,34 @@ class Window(QtGui.QMainWindow):
         self.take_n_spec.triggered.connect(lambda: start_timer(0))
         self.tool_bar.addAction(self.take_n_spec)
 
+        #TODO ### #TEMPORARY TEST WITH REAL SPECTRUM# ###
+        self.take_special_spec = QtGui.QAction('special', self.tool_bar)
+        self.take_special_spec.triggered.connect(special)
+        self.tool_bar.addAction(self.take_special_spec)
+        # ###end temporary# ###
+
+
+
 
         # make the plot window for the left side and add it to main window layout
         self.pw = pg.PlotWidget(name='Plot1')
+
+        # create plots (automatically addItem)
+        self.raw_data = self.pw.plot()
+        self.fit_data = self.pw.plot()
+        self.r1_data = self.pw.plot()
+        self.r2_data = self.pw.plot()
+        self.bg_data = self.pw.plot()
+        self.ref_data = self.pw.plot()
+        self.target_data = self.pw.plot()
+
+        self.pw.removeItem(self.r1_data)
+        self.pw.removeItem(self.r2_data)
+        self.pw.removeItem(self.bg_data)
+        self.pw.removeItem(self.ref_data)
+        self.pw.removeItem(self.target_data)
+
+
 
         # ###test### #
         self.mw_layout.addWidget(self.pw)
@@ -130,6 +155,7 @@ class Window(QtGui.QMainWindow):
         # ### make and add individual widgets to plot control
         self.plot_control_top_label = QtGui.QLabel('Select items to show')
         self.show_fit_cbox = QtGui.QCheckBox('Fit')
+        self.show_fit_cbox.setChecked(True)
         self.show_r1r2_cbox = QtGui.QCheckBox('R1, R2')
         self.show_bg_cbox = QtGui.QCheckBox('Background')
         self.show_reference_p_cbox = QtGui.QCheckBox('P(ref)')
@@ -137,6 +163,16 @@ class Window(QtGui.QMainWindow):
         self.zoom_full_btn = QtGui.QPushButton('Full spectrum')
         self.zoom_roi_btn = QtGui.QPushButton('Zoom ROI')
         self.autoscale_cbox = QtGui.QCheckBox('Autoscale')
+
+        # create plot control widget signals
+        self.show_fit_cbox.stateChanged.connect(self.show_fit_cbox_changed)
+        self.show_r1r2_cbox.stateChanged.connect(self.show_r1r2_cbox_changed)
+        self.show_bg_cbox.stateChanged.connect(self.show_bg_cbox_changed)
+        self.show_reference_p_cbox.stateChanged.connect(self.show_reference_p_cbox_changed)
+        self.show_target_p_cbox.stateChanged.connect(self.show_target_p_cbox_changed)
+        self.zoom_full_btn.clicked.connect(self.zoom_full)
+        self.zoom_roi_btn.clicked.connect(self.zoom_roi)
+
 
         self.plot_control_layout.addWidget(self.plot_control_top_label, 0, 0)
         self.plot_control_layout.addWidget(self.show_fit_cbox, 1, 0)
@@ -235,6 +271,48 @@ class Window(QtGui.QMainWindow):
                     core.spec.integration_time_micros(int(each)*1000)
                     break
 
+    def show_fit_cbox_changed(self):
+        if self.show_fit_cbox.isChecked():
+            self.pw.addItem(self.fit_data)
+        else:
+            self.pw.removeItem(self.fit_data)
+
+    def show_r1r2_cbox_changed(self):
+        if self.show_r1r2_cbox.isChecked():
+            self.pw.addItem(self.r1_data)
+            self.pw.addItem(self.r2_data)
+        else:
+            self.pw.removeItem(self.r1_data)
+            self.pw.removeItem(self.r2_data)
+
+    def show_bg_cbox_changed(self):
+        if self.show_bg_cbox.isChecked():
+            self.pw.addItem(self.bg_data)
+        else:
+            self.pw.removeItem(self.bg_data)
+
+    def show_reference_p_cbox_changed(self):
+        if self.show_reference_p_cbox.isChecked():
+            self.pw.addItem(self.ref_data)
+        else:
+            self.pw.removeItem(self.ref_data)
+
+    def show_target_p_cbox_changed(self):
+        if self.show_target_p_cbox.isChecked():
+            self.pw.addItem(self.target_data)
+        else:
+            self.pw.removeItem(self.target_data)
+
+    def zoom_full(self):
+        self.pw.setXRange(core.xs[0], core.xs[-1])
+
+    def zoom_roi(self):
+        self.pw.setXRange(core.xs_roi[0], core.xs_roi[-1])
+
+
+
+
+
     def initialize_inputs(self):
         self.lambda_naught_295_input.setText('%.3f' % core.lambda_0_ref)
         self.lambda_naught_t_input.setText('%.3f' % core.lambda_0_t_user)
@@ -245,9 +323,8 @@ class Window(QtGui.QMainWindow):
 class CoreData:
     def __init__(self):
         # super(CoreData, self).__init__()
-        self.curve = gui.pw.plot()
+        # self.curve = gui.pw.plot()
         self.vline = pg.InfiniteLine(pos=694.260, angle=90.0, movable=True)
-        self.curve_fit = gui.pw.plot()
         gui.pw.addItem(self.vline)
 
         self.stopped = True
@@ -302,7 +379,8 @@ def update():
         for each in range(num - 1):
             core.ys += core.spec.intensities()
         core.ys = core.ys/num
-    core.curve.setData(core.xs, core.ys)
+    gui.raw_data.setData(core.xs, core.ys)
+
 
     if not gui.press_fit_cbox.isChecked():
         return
@@ -343,11 +421,96 @@ def update():
 
     gui.pointer_position_input.setText('%.3f' % popt[5])
 
-    # delta T first try
-    current_temp = float(gui.temperature_input.text())
+    gui.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt), pen=(255, 0, 0))
+    gui.r1_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
+    gui.r2_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9]))
+    gui.bg_data.setData(core.xs_roi, (popt[8]*core.xs_roi + popt[9]))
 
     # calculate pressure
-    calculate_pressure(popt[5])
+    core.lambda_r1 = popt[5]
+    calculate_pressure(core.lambda_r1)
+    gui.press_calc_label2.setText('%.2f' % core.pressure)
+    core.vline.setPos(popt[5])
+    end = time.clock()
+    print end - start
+
+#TODO # ###TEMPORARY# ###
+def special():
+    print 'special'
+    # get and plot spectra
+    start = time.clock()
+    graph_data = open('full_spectrum.txt', 'r').read()
+    lines = graph_data.split('\n')
+    xs = []
+    ys = []
+
+    for line in lines:
+        if len(line) > 1:
+            i, j = line.split(',')
+            xs.append(i)
+            ys.append(j)
+
+    xra = asarray(xs).astype(float)
+    yra = asarray(ys).astype(float)
+
+    core.xs = xra
+    core.ys = yra
+    if gui.average_spec_cbox.isChecked():
+        num = int(gui.average_spec_input.text())
+        for each in range(num - 1):
+            core.ys += core.spec.intensities()
+        core.ys = core.ys / num
+    gui.raw_data.setData(core.xs, core.ys)
+
+    if not gui.press_fit_cbox.isChecked():
+        return
+
+    ###
+    # start fitting process, best to write separate functin later
+    ###
+
+    # start by defining ROI arrays and get max_index for ROI
+    full_max_index = np.argmax(core.ys)
+    core.xs_roi = core.xs[full_max_index - 100:full_max_index + 100]
+    core.ys_roi = core.ys[full_max_index - 100:full_max_index + 100]
+    roi_max_index = np.argmax(core.ys_roi)
+
+    # start with approximate linear background (using full spectrum)
+    slope = (core.ys_roi[-1] - core.ys_roi[0]) / (core.xs_roi[-1] - core.xs_roi[0])
+    intercept = core.ys_roi[0] - slope * core.xs_roi[0]
+
+    # obtain initial guesses for fitting parameters using ROI array
+    r1_pos = core.xs_roi[roi_max_index]
+    r2_pos = r1_pos - 1.4
+    r1_height = core.ys_roi[roi_max_index] - (slope * r1_pos + intercept)
+    r2_height = r1_height / 2.0
+
+    # check r1_height is greater than fitting threshold
+    threshold = int(gui.fit_threshold_input.text())
+    print r1_height, threshold
+    if r1_height < threshold:
+        print 'intensity too weak'
+        return
+
+    # define fitting parameters p0
+    # using height as an approximation of area
+    p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
+
+    # fit!
+    popt, pcov = curve_fit(double_pseudo, core.xs_roi, core.ys_roi, p0=p0)
+    print p0
+    print popt
+
+    gui.pointer_position_input.setText('%.3f' % popt[5])
+
+    gui.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt), pen=(255, 0, 0))
+    gui.r1_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
+    gui.r2_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9]))
+    gui.bg_data.setData(core.xs_roi, (popt[8] * core.xs_roi + popt[9]))
+
+    # calculate pressure
+    core.lambda_r1 = popt[5]
+    calculate_pressure(core.lambda_r1)
     gui.press_calc_label2.setText('%.2f' % core.pressure)
     core.vline.setPos(popt[5])
     end = time.clock()
@@ -359,9 +522,8 @@ def calculate_lambda_0_t():
     t = float(gui.temperature_input.text())
     lambda_0_t = 10000000 / (14423.0 + 0.0446*t - 0.000481*t*t + 0.000000371*t*t*t)
     core.lambda_0_t_user = lambda_0_t + offset
-    print offset, lambda_0_t
     gui.lambda_naught_t_input.setText('%.3f' % core.lambda_0_t_user)
-    calculate_pressure(core.lambda_r1)
+    calculate_pressure(core.lambda_r1)\
 
 
 def calculate_pressure(lambda_r1):
@@ -377,6 +539,12 @@ def double_pseudo(x, a1, c1, eta1, w1, a2, c2, eta2, w2, m, bg):
                  (1 - eta2) * (sqrt(4 * np.log(2)) / (sqrt(pi) * w2)) * exp(
                 -(4 * np.log(2) / w2 ** 2) * (x - c2) ** 2)) + \
            m * x + bg
+
+
+def pseudo(x, a, c, eta, w, m, bg):
+    return a * (eta * (2 / pi) * (w / (4 * (x - c) ** 2 + w ** 2)) +
+                 (1 - eta) * (sqrt(4 * np.log(2)) / (sqrt(pi) * w)) * exp(
+                -(4 * np.log(2) / w ** 2) * (x - c) ** 2)) + m * x + bg
 
 
 def update_count_time():

@@ -53,14 +53,15 @@ start = time.clock()
 fred = np.argmax(yra)
 charles = xra[np.argmax(yra)]
 end = time.clock()
-print end - start, 'wow!'
-print fred
-print charles
+# print end - start, 'wow!'
+# print fred
+# print charles
 
 
 slope = (yra[-1] - yra[0]) / (xra[-1] - xra[0])
 intercept = yra[0] - slope * xra[0]
 max_index = np.argmax(yra)
+print max_index
 r1 = xra[max_index]
 r2 = r1 - 1.4
 r1_h = yra[max_index] - (slope * r1 + intercept)
@@ -72,9 +73,9 @@ p0 = [r2_h, r2, 0.5, 1.0, r1_h, r1, 0.5, 1.0, slope, intercept]
 # popt, pcov = curve_fit(double_gauss, xra, yra, p0=[1000.0, 699.0, 1.0, 2000.0, 700.0, 1.0, -1.0, 3000.0])
 popt, pcov = curve_fit(double_pseudo, xra, yra, p0=p0)
 
-
-print popt
 print p0
+print popt
+
 
 for each in range(10):
     dif = popt[each] - p0[each]
@@ -86,7 +87,7 @@ beta = 9.5
 lambda0 = 694.300
 
 P = alpha * ((1/beta)*(((popt[5]/lambda0) ** beta) - 1))
-print P
+# print P
 
 
 
