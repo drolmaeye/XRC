@@ -471,8 +471,8 @@ def special():
 
     # start by defining ROI arrays and get max_index for ROI
     full_max_index = np.argmax(core.ys)
-    core.xs_roi = core.xs[full_max_index - 100:full_max_index + 100]
-    core.ys_roi = core.ys[full_max_index - 100:full_max_index + 100]
+    core.xs_roi = core.xs[full_max_index - 150:full_max_index + 150]
+    core.ys_roi = core.ys[full_max_index - 150:full_max_index + 150]
     roi_max_index = np.argmax(core.ys_roi)
 
     # start with approximate linear background (using full spectrum)
