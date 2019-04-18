@@ -47,7 +47,7 @@ class Window(QtGui.QMainWindow):
         # make the plot window for the left side and add it to main window layout
         self.pw = pg.PlotWidget(name='Plot1')
 
-        # create plots (automatically addItem)
+        # create plot items (need to be added when necessary)
         self.raw_data = pg.PlotDataItem()
         self.fit_data = pg.PlotDataItem()
         self.r1_data = pg.PlotDataItem()
@@ -64,10 +64,9 @@ class Window(QtGui.QMainWindow):
         self.vline_target.sigPositionChanged.connect(self.target_line_moved)
 
         self.pw.addItem(self.raw_data)
-        self.pw.addItem(self.fit_data)
-        self.pw.addItem(self.vline_press)
+        # self.pw.addItem(self.fit_data)
+        # self.pw.addItem(self.vline_press)
 
-        # ###test### #
         self.mw_layout.addWidget(self.pw)
 
 
@@ -78,180 +77,70 @@ class Window(QtGui.QMainWindow):
 
         # make the layout for the control widget
         self.cw_layout = QtGui.QVBoxLayout()
+        # self.cw_layout.setAlignment(QtCore.Qt.AlignTop)
         self.cw.setLayout(self.cw_layout)
 
-        # ######
-        # #### Spectrum Control Window
-        # ######
-        # ###
-        # #### make top right widget for spectrometer control
-        # ###self.spec_control = QtGui.QGroupBox()
-        # ###self.spec_control.setTitle('Spectrum Control')
-        # ###self.cw_layout.addWidget(self.spec_control)
-        # ###
-        # #### make and add layout to Spectrum Control QGroupBox
-        # ###self.spec_control_layout = QtGui.QGridLayout()
-        # ###self.spec_control_layout.setAlignment(QtCore.Qt.AlignTop)
-        # ###self.spec_control.setLayout(self.spec_control_layout)
-        # ###
-        # #### ###make and add individual widgets to spec control grid layout
-        # ###
-        # #### create and add count time label
-        # ###self.count_time_label = QtGui.QLabel('Integration time (ms)')
-        # ###self.spec_control_layout.addWidget(self.count_time_label, 0, 0, 1, 2)
-        # ###
-        # #### create, configure, add count time input field
-        # ###self.count_time_input = QtGui.QLineEdit('100')
-        # ###self.count_time_input.setValidator(QtGui.QIntValidator())
-        # ###self.count_time_input.setMaxLength(4)
-        # ###self.count_time_input.editingFinished.connect(update_count_time)
-        # ###self.spec_control_layout.addWidget(self.count_time_input, 1, 0)
-        # ###
-        # #### crate count time shortcut buttons
-        # ###self.count_less_button = QtGui.QPushButton('')
-        # ###self.count_less_button.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_ArrowLeft))
-        # ###self.count_more_button = QtGui.QPushButton('')
-        # ###self.count_more_button.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_ArrowRight))
-        # ###
-        # #### connect shortcut buttons to count time function
-        # ###self.count_less_button.clicked.connect(lambda: self.count_time_shortcut('down'))
-        # ###self.count_more_button.clicked.connect(lambda: self.count_time_shortcut('up'))
-        # ###
-        # #### add shortcut buttons to layout
-        # ###self.spec_control_layout.addWidget(self.count_less_button, 1, 1)
-        # ###self.spec_control_layout.addWidget(self.count_more_button, 1, 2)
-        # ###
-        # ###
-        # #### create and add checkbox widget
-        # ###self.average_spec_cbox = QtGui.QCheckBox('Average n spectra')
-        # ###self.spec_control_layout.addWidget(self.average_spec_cbox, 3, 0, 1, 2)
-        # ###
-        # #### create and add number to average
-        # ###self.average_spec_input = QtGui.QLineEdit('1')
-        # ###self.average_spec_input.setValidator(QtGui.QIntValidator())
-        # ###self.average_spec_input.setMaxLength(1)
-        # ###self.spec_control_layout.addWidget(self.average_spec_input, 3, 2)
-
-        ###
-        # Spectrum Control Window v2
-        ###
+        '''
+        Spectrum control window v2
+        '''
 
         # make top right widget for spectrometer control
         self.spec_control = QtGui.QGroupBox()
         self.spec_control.setTitle('Spectrum Control')
         self.cw_layout.addWidget(self.spec_control)
 
-        # make and add layout to Spectrum Control QGroupBox
+        # make and set layout to Spectrum Control QGroupBox
         self.spec_control_layout = QtGui.QVBoxLayout()
+        self.spec_control_layout.setAlignment(QtCore.Qt.AlignTop)
+        # ###self.spec_control_layout.setSpacing(10)
         self.spec_control.setLayout(self.spec_control_layout)
 
-        # ###make and add individual widgets to spec control grid layout
+        # ###make individual widgets to spec control grid layout
 
         # create count time label
         self.count_time_label = QtGui.QLabel('Integration time (ms)')
-
-
-        # create, configure, add count time input field
+        # create, configure count time input
         self.count_time_input = QtGui.QLineEdit('100')
         self.count_time_input.setValidator(QtGui.QIntValidator())
         self.count_time_input.setMaxLength(4)
-        self.count_time_input.editingFinished.connect(update_count_time)
-
-
         # crate count time shortcut buttons
         self.count_less_button = QtGui.QPushButton('')
         self.count_less_button.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_ArrowLeft))
+        self.count_less_button.setMinimumWidth(70)
         self.count_more_button = QtGui.QPushButton('')
         self.count_more_button.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_ArrowRight))
+        self.count_more_button.setMinimumWidth(70)
+        # create checkbox widget, create and configure spinbox widget
+        self.average_spec_cbox = QtGui.QCheckBox('Average n spectra')
+        self.average_spec_sbox = QtGui.QSpinBox()
+        self.average_spec_sbox.setMaximumWidth(50)
+        self.average_spec_sbox.setValue(1)
+        self.average_spec_sbox.setMinimum(1)
+        self.average_spec_sbox.setMaximum(10)
 
-        # connect shortcut buttons to count time function
+        # connect signals
+        self.count_time_input.editingFinished.connect(self.update_count_time)
         self.count_less_button.clicked.connect(lambda: self.count_time_shortcut('down'))
         self.count_more_button.clicked.connect(lambda: self.count_time_shortcut('up'))
 
-        # add shortcut buttons to layout
-
-
-
-        # create and add checkbox widget
-        self.average_spec_cbox = QtGui.QCheckBox('Average n spectra')
-
-
-        # create and add number to average
-        self.average_spec_input = QtGui.QLineEdit('1')
-        self.average_spec_input.setValidator(QtGui.QIntValidator())
-        self.average_spec_input.setMaxLength(1)
-
-
         # add widgets to layout
         self.spec_control_layout.addWidget(self.count_time_label)
-        self.spec_control_layout.addWidget(self.count_time_input)
-        self.spec_control_layout.addWidget(self.count_less_button)
-        self.spec_control_layout.addWidget(self.count_more_button)
-        self.spec_control_layout.addWidget(self.average_spec_cbox)
-        self.spec_control_layout.addWidget(self.average_spec_input)
 
+        self.count_time_layout = QtGui.QHBoxLayout()
+        self.count_time_layout.addWidget(self.count_less_button)
+        self.count_time_layout.addWidget(self.count_time_input)
+        self.count_time_layout.addWidget(self.count_more_button)
+        self.spec_control_layout.addLayout(self.count_time_layout)
 
-        # ######
-        # #### Plot control window
-        # ######
-        # ###
-        # #### make central right widget for plot control
-        # ###self.plot_control = QtGui.QGroupBox()
-        # ###self.plot_control.setTitle('Plot Control')
-        # ###self.cw_layout.addWidget(self.plot_control)
-        # ###
-        # #### make and add layout for Plot Control QGroupBox
-        # ###self.plot_control_layout = QtGui.QGridLayout()
-        # ###self.plot_control_layout.setAlignment(QtCore.Qt.AlignTop)
-        # ###self.plot_control.setLayout(self.plot_control_layout)
-        # ###
-        # #### ### make and add individual widgets to plot control
-        # ###self.plot_control_top_label = QtGui.QLabel('Select items to show')
-        # ###self.show_fit_cbox = QtGui.QCheckBox('Fit')
-        # ###self.show_fit_cbox.setChecked(True)
-        # ###self.show_r1r2_cbox = QtGui.QCheckBox('R1, R2')
-        # ###self.show_bg_cbox = QtGui.QCheckBox('Background')
-        # ###self.show_reference_p_cbox = QtGui.QCheckBox('P(ref)')
-        # ###self.show_ref_p_lambda = QtGui.QLabel('694.260')
-        # ###self.show_ref_p_pressure = QtGui.QLabel('0.00')
-        # ###self.show_ref_p_btn = QtGui.QPushButton('Grab')
-        # ###self.show_target_p_cbox = QtGui.QCheckBox('P(target)')
-        # ###self.show_target_p_lambda = QtGui.QLineEdit('694.260')
-        # ###self.show_target_p_pressure = QtGui.QLineEdit('0.00')
-        # ###self.zoom_full_btn = QtGui.QPushButton('Full spectrum')
-        # ###self.zoom_roi_btn = QtGui.QPushButton('Zoom ROI')
-        # ###self.autoscale_cbox = QtGui.QCheckBox('Autoscale')
-        # ###
-        # #### create plot control widget signals
-        # ###self.show_fit_cbox.stateChanged.connect(self.show_fit_cbox_changed)
-        # ###self.show_r1r2_cbox.stateChanged.connect(self.show_r1r2_cbox_changed)
-        # ###self.show_bg_cbox.stateChanged.connect(self.show_bg_cbox_changed)
-        # ###self.show_reference_p_cbox.stateChanged.connect(self.show_reference_p_cbox_changed)
-        # ###self.show_target_p_cbox.stateChanged.connect(self.show_target_p_cbox_changed)
-        # ###self.show_target_p_lambda.editingFinished.connect(self.show_target_p_lambda_changed)
-        # ###self.show_target_p_pressure.editingFinished.connect(self.show_target_p_pressure_changed)
-        # ###self.zoom_full_btn.clicked.connect(self.zoom_full)
-        # ###self.zoom_roi_btn.clicked.connect(self.zoom_roi)
-        # ###
-        # ###
-        # ###self.plot_control_layout.addWidget(self.plot_control_top_label, 0, 0)
-        # ###self.plot_control_layout.addWidget(self.show_fit_cbox, 1, 0)
-        # ###self.plot_control_layout.addWidget(self.show_r1r2_cbox, 2, 0)
-        # ###self.plot_control_layout.addWidget(self.show_bg_cbox, 3, 0)
-        # ###self.plot_control_layout.addWidget(self.show_reference_p_cbox, 4, 0)
-        # ###self.plot_control_layout.addWidget(self.show_ref_p_lambda, 4, 1)
-        # ###self.plot_control_layout.addWidget(self.show_ref_p_pressure, 4, 2)
-        # #### self.plot_control_layout.addWidget(self.show_ref_p_btn, 4, 3)
-        # ###self.plot_control_layout.addWidget(self.show_target_p_cbox, 5, 0)
-        # ###self.plot_control_layout.addWidget(self.show_target_p_lambda, 5, 1)
-        # ###self.plot_control_layout.addWidget(self.show_target_p_pressure, 5, 2)
-        # ###self.plot_control_layout.addWidget(self.zoom_full_btn, 6, 0)
-        # ###self.plot_control_layout.addWidget(self.zoom_roi_btn, 6, 1)
-        # ###self.plot_control_layout.addWidget(self.autoscale_cbox, 6, 2)
+        self.average_spec_layout = QtGui.QHBoxLayout()
+        self.average_spec_layout.setAlignment(QtCore.Qt.AlignLeft)
+        self.average_spec_layout.addWidget(self.average_spec_cbox)
+        self.average_spec_layout.addWidget(self.average_spec_sbox)
+        self.spec_control_layout.addLayout(self.average_spec_layout)
 
-        ###
-        # Plot control window v2
-        ###
+        '''
+        Plot control window v2
+        '''
 
         # make middle-right widget for plot control
         self.plot_control = QtGui.QGroupBox()
@@ -260,38 +149,31 @@ class Window(QtGui.QMainWindow):
 
         # make and set primary layout for Plot Control QGroupBox
         self.plot_control_layout = QtGui.QVBoxLayout()
+        self.plot_control_layout.setAlignment(QtCore.Qt.AlignTop)
         self.plot_control.setLayout(self.plot_control_layout)
-        # make and add layout for reference curves
-        self.reference_curves_layout = QtGui.QGridLayout()
-        self.reference_curves_layout.setAlignment(QtCore.Qt.AlignTop)
-        self.plot_control_layout.addLayout(self.reference_curves_layout)
-        # make and add layout for reference lines
-        self.reference_lines_layout = QtGui.QGridLayout()
-        self.reference_lines_layout.setAlignment(QtCore.Qt.AlignTop)
-        self.plot_control_layout.addLayout(self.reference_lines_layout)
-        # make and add layout for zoom buttons
-        self.zoom_buttons_layout = QtGui.QHBoxLayout()
-        self.plot_control_layout.addLayout(self.zoom_buttons_layout)
 
         # ### make and add individual widgets to plot control
+
+        # create show curves label and checkboxes
         self.show_fits_label = QtGui.QLabel('Select fitted data to show')
         self.show_fit_cbox = QtGui.QCheckBox('Fit')
-        self.show_fit_cbox.setChecked(True)
         self.show_r1r2_cbox = QtGui.QCheckBox('R1, R2')
         self.show_bg_cbox = QtGui.QCheckBox('Background')
-        self.show_refs_label = QtGui.QLabel('Select reference lines to show') #new
-        self.show_fitted_p_cbox = QtGui.QCheckBox('P(fit)') #new
+        #  create show reference lines labels, cboxes, data displays, data inputs
+        self.show_refs_label = QtGui.QLabel('Select reference lines to show')
+        self.show_fitted_p_cbox = QtGui.QCheckBox('P(fit)')
         self.show_reference_p_cbox = QtGui.QCheckBox('P(ref)')
         self.show_ref_p_lambda = QtGui.QLabel('694.260')
         self.show_ref_p_pressure = QtGui.QLabel('0.00')
         self.show_target_p_cbox = QtGui.QCheckBox('P(target)')
         self.show_target_p_lambda = QtGui.QLineEdit('694.260')
         self.show_target_p_pressure = QtGui.QLineEdit('0.00')
+        # create zoom buttons
         self.zoom_full_btn = QtGui.QPushButton('Full spectrum')
         self.zoom_roi_btn = QtGui.QPushButton('Zoom ROI')
         self.autoscale_cbox = QtGui.QCheckBox('Autoscale')
 
-        # create plot control widget signals
+        # connect plot control signals
         self.show_fit_cbox.stateChanged.connect(self.show_fit_cbox_changed)
         self.show_r1r2_cbox.stateChanged.connect(self.show_r1r2_cbox_changed)
         self.show_bg_cbox.stateChanged.connect(self.show_bg_cbox_changed)
@@ -302,34 +184,43 @@ class Window(QtGui.QMainWindow):
         self.zoom_full_btn.clicked.connect(self.zoom_full)
         self.zoom_roi_btn.clicked.connect(self.zoom_roi)
 
+        # add widgets to layout
+        self.plot_control_layout.addWidget(self.show_fits_label)
 
-        self.reference_curves_layout.addWidget(self.show_fits_label, 0, 0, 1, 3)
-        self.reference_curves_layout.addWidget(self.show_fit_cbox, 1, 0)
-        self.reference_curves_layout.addWidget(self.show_r1r2_cbox, 1, 1)
-        self.reference_curves_layout.addWidget(self.show_bg_cbox, 1, 2)
-        self.reference_lines_layout.addWidget(self.show_refs_label, 0, 0, 1, 3)
-        self.reference_lines_layout.addWidget(self.show_fitted_p_cbox, 1, 0)
-        self.reference_lines_layout.addWidget(self.show_reference_p_cbox, 2, 0)
-        self.reference_lines_layout.addWidget(self.show_ref_p_lambda, 2, 1)
-        self.reference_lines_layout.addWidget(self.show_ref_p_pressure, 2, 2)
-        # self.plot_control_layout.addWidget(self.show_ref_p_btn, 4, 3)
-        self.reference_lines_layout.addWidget(self.show_target_p_cbox, 3, 0)
-        self.reference_lines_layout.addWidget(self.show_target_p_lambda, 3, 1)
-        self.reference_lines_layout.addWidget(self.show_target_p_pressure, 3, 2)
+        self.reference_curves_layout = QtGui.QHBoxLayout()
+        self.reference_curves_layout.addWidget(self.show_fit_cbox)
+        self.reference_curves_layout.addWidget(self.show_r1r2_cbox)
+        self.reference_curves_layout.addWidget(self.show_bg_cbox)
+        self.plot_control_layout.addLayout(self.reference_curves_layout)
+
+        self.plot_control_layout.addWidget(self.show_refs_label)
+
+        self.reference_lines_layout = QtGui.QGridLayout()
+        self.reference_lines_layout.addWidget(self.show_fitted_p_cbox, 0, 0)
+        self.reference_lines_layout.addWidget(self.show_reference_p_cbox, 1, 0)
+        self.reference_lines_layout.addWidget(self.show_ref_p_lambda, 1, 1)
+        self.reference_lines_layout.addWidget(self.show_ref_p_pressure, 1, 2)
+        self.reference_lines_layout.addWidget(self.show_target_p_cbox, 2, 0)
+        self.reference_lines_layout.addWidget(self.show_target_p_lambda, 2, 1)
+        self.reference_lines_layout.addWidget(self.show_target_p_pressure, 2, 2)
+        self.plot_control_layout.addLayout(self.reference_lines_layout)
+
+        self.zoom_buttons_layout = QtGui.QHBoxLayout()
         self.zoom_buttons_layout.addWidget(self.zoom_full_btn)
         self.zoom_buttons_layout.addWidget(self.zoom_roi_btn)
         self.zoom_buttons_layout.addWidget(self.autoscale_cbox)
+        self.plot_control_layout.addLayout(self.zoom_buttons_layout)
 
-        ###
-        # Pressure Control Window
-        ###
+        '''
+        Pressure Control Window
+        '''
 
         # make bottom right widget for Pressure control
         self.press_control = QtGui.QGroupBox()
         self.press_control.setTitle('Pressure Control')
         self.cw_layout.addWidget(self.press_control)
 
-        # make and add layout to Pressure Control QGroupBox
+        # make and add primary layout to Pressure Control QGroupBox
         self.press_control_layout = QtGui.QGridLayout()
         self.press_control_layout.setAlignment(QtCore.Qt.AlignTop)
         self.press_control.setLayout(self.press_control_layout)
@@ -359,7 +250,6 @@ class Window(QtGui.QMainWindow):
         # connect pressure control signals
         self.temperature_input.returnPressed.connect(self.calculate_lambda_0_t)
 
-
         # add pressure control widgets to pressure control layout
         self.press_control_layout.addWidget(self.press_calibration_label, 0, 0)
         self.press_control_layout.addWidget(self.press_calibration_display, 0, 1)
@@ -379,9 +269,13 @@ class Window(QtGui.QMainWindow):
         self.press_control_layout.addWidget(self.pressure_fit_display, 6, 1)
         self.press_control_layout.addWidget(self.press_fit_cbox, 6, 2)
 
-
-
+        # huzzah
         self.show()
+
+    # class methods for spectrum control
+    def update_count_time(self):
+        count_time = int(self.count_time_input.text()) * 1000
+        core.spec.integration_time_micros(count_time)
 
     def count_time_shortcut(self, direction):
         # quickly increase count time over common range
@@ -400,6 +294,7 @@ class Window(QtGui.QMainWindow):
                     core.spec.integration_time_micros(int(each)*1000)
                     break
 
+    # class methods for plot control
     def show_fit_cbox_changed(self):
         if self.show_fit_cbox.isChecked():
             self.pw.addItem(self.fit_data)
@@ -454,14 +349,13 @@ class Window(QtGui.QMainWindow):
         target_pressure = core.alpha * ((1 / core.beta) * (((lambda_r1 / core.lambda_0_t_user) ** core.beta) - 1))
         self.show_target_p_pressure.setText('%.2f' % target_pressure)
 
-
     def zoom_full(self):
         self.pw.setXRange(core.xs[0], core.xs[-1])
 
     def zoom_roi(self):
         self.pw.setXRange(core.xs_roi[0], core.xs_roi[-1])
 
-    # Class methods associated with Pressure Control widgets
+    # class methods for pressure control
     def calculate_lambda_0_t(self):
         offset = core.lambda_0_user - core.lambda_0_ref
         t = float(self.temperature_input.text())
@@ -471,17 +365,6 @@ class Window(QtGui.QMainWindow):
         calculate_pressure(core.lambda_r1)
 
 
-
-
-
-    def initialize_inputs(self):
-        pass
-        # self.lambda_naught_295_display.setText('%.3f' % core.lambda_0_ref + ' nm')
-        # self.lambda_naught_t_display.setText('%.3f' % core.lambda_0_t_user)
-        # self.pointer_position_input.setText('%.3f' % core.lambda_0_ref)
-        # self.temperature_input.setText('%.0f' % core.temperature)
-
-
 class CoreData:
     def __init__(self):
         self.stopped = True
@@ -489,7 +372,7 @@ class CoreData:
 
         self.devices = sb.list_devices()
         self.spec = sb.Spectrometer(self.devices[0])
-        self.spec.integration_time_micros(10000)
+        self.spec.integration_time_micros(100000)
 
         self.xs = self.spec.wavelengths()
         self.ys = self.spec.intensities()
@@ -510,8 +393,6 @@ class CoreData:
         self.pressure = 0.00
 
 
-
-
 def start_timer(count):
     if count:
         update()
@@ -525,27 +406,22 @@ def start_timer(count):
             core.timer.stop()
 
 
-
-
 def update():
     # get and plot spectra
     start = time.clock()
     core.ys = core.spec.intensities()
     if gui.average_spec_cbox.isChecked():
-        num = int(gui.average_spec_input.text())
+        num = gui.average_spec_sbox.value()
         for each in range(num - 1):
             core.ys += core.spec.intensities()
         core.ys = core.ys/num
     gui.raw_data.setData(core.xs, core.ys)
 
+    if gui.press_fit_cbox.isChecked():
+        fit_spectrum()
 
-    if not gui.press_fit_cbox.isChecked():
-        return
 
-    ###
-    # start fitting process, best to write separate functin later
-    ###
-
+def fit_spectrum():
     # start by defining ROI arrays and get max_index for ROI
     full_max_index = np.argmax(core.ys)
     core.xs_roi = core.xs[full_max_index - 150:full_max_index + 150]
@@ -573,11 +449,9 @@ def update():
     else:
         gui.threshold_warning_label.setText('')
 
-    # define fitting parameters p0
-    # using height as an approximation of area
+    # define fitting parameters p0 (area approximated by height)
     p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
-
-    # fit!
+    # fit
     popt, pcov = curve_fit(double_pseudo, core.xs, core.ys, p0=p0)
 
     gui.lambda_r1_display.setText('%.3f' % popt[5] + ' nm')
@@ -585,20 +459,19 @@ def update():
     gui.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt), pen=(255, 0, 0))
     gui.r1_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
     gui.r2_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9]))
-    gui.bg_data.setData(core.xs_roi, (popt[8]*core.xs_roi + popt[9]))
+    gui.bg_data.setData(core.xs_roi, (popt[8] * core.xs_roi + popt[9]))
 
     # calculate pressure
     core.lambda_r1 = popt[5]
     calculate_pressure(core.lambda_r1)
     gui.pressure_fit_display.setText('%.2f' % core.pressure + ' GPa')
     gui.vline_press.setPos(popt[5])
-    end = time.clock()
-    print end - start
 
 
 def calculate_pressure(lambda_r1):
     core.pressure = core.alpha * ((1 / core.beta) * (((lambda_r1 / core.lambda_0_t_user) ** core.beta) - 1))
     gui.pressure_fit_display.setText('%.2f' % core.pressure + ' GPa')
+
 
 def calculate_target_p_lambda():
     target_pressure = float(gui.show_target_p_pressure.text())
@@ -627,20 +500,9 @@ def pseudo(x, a, c, eta, w, m, bg):
                 -(4 * np.log(2) / w ** 2) * (x - c) ** 2)) + m * x + bg
 
 
-def update_count_time():
-    count_time = int(gui.count_time_input.text())*1000
-    core.spec.integration_time_micros(count_time)
-
-
-
-
-
-
 app = QtGui.QApplication(sys.argv)
-pg.setConfigOptions(antialias=True)
 core = CoreData()
 gui = Window()
-
-gui.initialize_inputs()
+pg.setConfigOptions(antialias=True)
 update()
 sys.exit(app.exec_())
