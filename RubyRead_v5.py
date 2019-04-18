@@ -23,28 +23,58 @@ class Window(QtGui.QMainWindow):
         super(Window, self).__init__()
         self.setGeometry(100, 100, 1080, 720)
         self.setWindowTitle('RubyRead')
-        self.setWindowIcon(QtGui.QIcon('ruby3.png'))
+        self.setWindowIcon(QtGui.QIcon('ruby4.png'))
+        # self.setStyleSheet('font-size: 10pt')
 
-        # create the main widget self.mw for the 'window' portion and make it central
+        # create the main window widget and make it central
         self.mw = QtGui.QWidget()
         self.setCentralWidget(self.mw)
-
         # now make and set layout for the mw (main window)
-        self.mw_layout = QtGui.QHBoxLayout()
+        self.mw_layout = QtGui.QVBoxLayout()
         self.mw.setLayout(self.mw_layout)
 
-        # ###make toolbar
-        self.tool_bar = self.addToolBar('Main Controls')
+        '''
+        Custom Toolbar
+        '''
 
-        self.take_one_spec = QtGui.QAction('1', self.tool_bar)
-        self.take_one_spec.triggered.connect(lambda: start_timer(1))
-        self.tool_bar.addAction(self.take_one_spec)
+        # make custom toolbar for top of main window
+        self.tb = QtGui.QWidget()
+        self.tb_layout = QtGui.QHBoxLayout()
+        self.tb_layout.setAlignment(QtCore.Qt.AlignLeft)
+        self.tb.setLayout(self.tb_layout)
 
-        self.take_n_spec = QtGui.QAction('n', self.tool_bar)
-        self.take_n_spec.triggered.connect(lambda: start_timer(0))
-        self.tool_bar.addAction(self.take_n_spec)
+        # make custom toolbar widgets
+        self.take_spec_label = QtGui.QLabel('Collect')
+        self.take_one_spec_btn = QtGui.QPushButton('1')
+        self.take_n_spec_btn = QtGui.QPushButton('n')
+        self.take_n_spec_btn.setCheckable(True)
 
-        # make the plot window for the left side and add it to main window layout
+        self.fit_spec_label = QtGui.QLabel('Fit')
+        self.fit_one_spec_btn = QtGui.QPushButton('1')
+        self.fit_n_spec_btn = QtGui.QPushButton('n')
+        self.fit_n_spec_btn.setCheckable(True)
+
+        # connect custom toolbar signals
+        self.take_one_spec_btn.clicked.connect(lambda: start_timer(1))
+        self.take_n_spec_btn.clicked.connect(lambda: start_timer(0))
+
+        # add custom toolbar widgets to toolbar layout
+        self.tb_layout.addWidget(self.take_spec_label)
+        self.tb_layout.addWidget(self.take_one_spec_btn)
+        self.tb_layout.addWidget(self.take_n_spec_btn)
+        self.tb_layout.addSpacing(20)
+        self.tb_layout.addWidget(self.fit_spec_label)
+        self.tb_layout.addWidget(self.fit_one_spec_btn)
+        self.tb_layout.addWidget(self.fit_n_spec_btn)
+
+        # add custom toolbar to main window
+        self.mw_layout.addWidget(self.tb)
+
+        '''
+        Plot Window
+        '''
+
+        # make the plot window for the left side of bottom layout
         self.pw = pg.PlotWidget(name='Plot1')
 
         # create plot items (need to be added when necessary)
@@ -60,20 +90,23 @@ class Window(QtGui.QMainWindow):
         self.vline_ref = pg.InfiniteLine(pos=694.260, angle=90.0, movable=False)
         self.vline_target = pg.InfiniteLine(pos=694.260, angle=90.0, movable=True)
 
+        # raw data is always visible, add rest when or as needed
+        self.pw.addItem(self.raw_data)
+
         # create signal for target pressure line
         self.vline_target.sigPositionChanged.connect(self.target_line_moved)
 
-        self.pw.addItem(self.raw_data)
-        # self.pw.addItem(self.fit_data)
-        # self.pw.addItem(self.vline_press)
+        # make layout for plot window and control window and add to main window
+        self.bottom_layout = QtGui.QHBoxLayout()
+        self.mw_layout.addLayout(self.bottom_layout)
 
-        self.mw_layout.addWidget(self.pw)
-
+        # add plot widget to bottom layout
+        self.bottom_layout.addWidget(self.pw)
 
         # make the control window for the right side and add it to main window layout
         self.cw = QtGui.QWidget()
         self.cw.setMaximumWidth(300)
-        self.mw_layout.addWidget(self.cw)
+        self.bottom_layout.addWidget(self.cw)
 
         # make the layout for the control widget
         self.cw_layout = QtGui.QVBoxLayout()
@@ -81,7 +114,7 @@ class Window(QtGui.QMainWindow):
         self.cw.setLayout(self.cw_layout)
 
         '''
-        Spectrum control window v2
+        Spectrum control window
         '''
 
         # make top right widget for spectrometer control
@@ -271,6 +304,10 @@ class Window(QtGui.QMainWindow):
 
         # huzzah
         self.show()
+
+    '''
+    Class methods
+    '''
 
     # class methods for spectrum control
     def update_count_time(self):
