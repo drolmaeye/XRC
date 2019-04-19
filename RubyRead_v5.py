@@ -14,6 +14,7 @@ import time
 from scipy.optimize import curve_fit
 from scipy import exp, asarray
 from math import cos, sin, radians, pi, sqrt
+import os
 
 
 class Window(QtGui.QMainWindow):
@@ -301,6 +302,21 @@ class Window(QtGui.QMainWindow):
         self.press_control_layout.addWidget(self.pressure_fit_label, 6, 0)
         self.press_control_layout.addWidget(self.pressure_fit_display, 6, 1)
         self.press_control_layout.addWidget(self.press_fit_cbox, 6, 2)
+
+        # experimenting with stylesheets
+
+        # from Clemens' Dioptas
+        # ###file = open(os.path.join("stylesheet.qss"))
+        # ###stylesheet = file.read()
+        # ###self.setStyleSheet(stylesheet)
+        # ###file.close()
+
+        # ###file = open(os.path.join("DarkStyle.qss"))
+        # ###stylesheet = file.read()
+        # ###self.setStyleSheet(stylesheet)
+        # ###file.close()
+
+        
 
         # huzzah
         self.show()
