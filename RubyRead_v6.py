@@ -199,9 +199,11 @@ class Window(QtGui.QMainWindow):
         self.show_reference_p_cbox = QtGui.QCheckBox('P(ref)')
         self.show_ref_p_lambda = QtGui.QLabel('694.260')
         self.show_ref_p_pressure = QtGui.QLabel('0.00')
+        self.show_ref_p_delta = QtGui.QLabel('0.00')
         self.show_target_p_cbox = QtGui.QCheckBox('P(target)')
         self.show_target_p_lambda = QtGui.QLineEdit('694.260')
         self.show_target_p_pressure = QtGui.QLineEdit('0.00')
+        self.show_target_p_delta = QtGui.QLineEdit('0.00')
         # create zoom buttons
         self.zoom_full_btn = QtGui.QPushButton('Full spectrum')
         self.zoom_roi_btn = QtGui.QPushButton('Zoom ROI')
@@ -215,6 +217,7 @@ class Window(QtGui.QMainWindow):
         self.show_target_p_cbox.stateChanged.connect(self.show_target_p_cbox_changed)
         self.show_target_p_lambda.editingFinished.connect(self.show_target_p_lambda_changed)
         self.show_target_p_pressure.editingFinished.connect(self.show_target_p_pressure_changed)
+        self.show_target_p_delta.editingFinished.connect(self.show_target_p_delta_changed)
         self.zoom_full_btn.clicked.connect(self.zoom_full)
         self.zoom_roi_btn.clicked.connect(self.zoom_roi)
 
@@ -234,9 +237,11 @@ class Window(QtGui.QMainWindow):
         self.reference_lines_layout.addWidget(self.show_reference_p_cbox, 1, 0)
         self.reference_lines_layout.addWidget(self.show_ref_p_lambda, 1, 1)
         self.reference_lines_layout.addWidget(self.show_ref_p_pressure, 1, 2)
+        self.reference_lines_layout.addWidget(self.show_ref_p_delta, 1, 3)
         self.reference_lines_layout.addWidget(self.show_target_p_cbox, 2, 0)
         self.reference_lines_layout.addWidget(self.show_target_p_lambda, 2, 1)
         self.reference_lines_layout.addWidget(self.show_target_p_pressure, 2, 2)
+        self.reference_lines_layout.addWidget(self.show_target_p_delta, 2, 3)
         self.plot_control_layout.addLayout(self.reference_lines_layout)
 
         self.zoom_buttons_layout = QtGui.QHBoxLayout()
@@ -264,25 +269,27 @@ class Window(QtGui.QMainWindow):
         # create pressure control widgets
         self.press_calibration_label = QtGui.QLabel('Pressure Calibration')
         self.press_calibration_display = QtGui.QLabel('Dorogokupets')
-        self.lambda_naught_295_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(295)')
-        self.lambda_naught_295_display = QtGui.QLabel('694.260 nm')
-        self.lambda_naught_t_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(T)')
-        self.lambda_naught_t_display = QtGui.QLabel('694.260 nm')
-        self.lambda_r1_label = QtGui.QLabel(u'\u03BB' + '<sub>R1</sub>')
-        self.lambda_r1_display = QtGui.QLabel('694.260 nm')
+        self.lambda_naught_295_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(295)' + ' (nm)')
+        self.lambda_naught_295_display = QtGui.QLabel('694.260')
+        self.lambda_naught_t_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(T)' + ' (nm)')
+        self.lambda_naught_t_display = QtGui.QLabel('694.260')
+        self.lambda_r1_label = QtGui.QLabel(u'\u03BB' + '<sub>R1</sub>' + ' (nm)')
+        self.lambda_r1_display = QtGui.QLabel('694.260')
         self.temperature_label = QtGui.QLabel('Temperature (K)')
-        self.temperature_input = QtGui.QLineEdit('295')
+        self.temperature_input = QtGui.QSpinBox()
+        self.temperature_input.setRange(4, 600)
+        self.temperature_input.setValue(295)
         self.temperature_track_cbox = QtGui.QCheckBox('Track')
         self.threshold_label = QtGui.QLabel('Fit thresholds')
         self.threshold_min_input = QtGui.QLineEdit('200')
         self.threshold_min_input.setValidator(QtGui.QIntValidator())
         self.threshold_warning_label = QtGui.QLabel('')
-        self.pressure_fit_label = QtGui.QLabel('Pressure<sub>fit</sub>')
-        self.pressure_fit_display = QtGui.QLabel('0.00 GPa')
+        self.pressure_fit_label = QtGui.QLabel('Pressure(fit) (GPa)')
+        self.pressure_fit_display = QtGui.QLabel('0.00')
         self.press_fit_cbox = QtGui.QCheckBox('Fit')
 
         # connect pressure control signals
-        self.temperature_input.returnPressed.connect(self.calculate_lambda_0_t)
+        self.temperature_input.valueChanged.connect(self.calculate_lambda_0_t)
 
         # add pressure control widgets to pressure control layout
         self.press_control_layout.addWidget(self.press_calibration_label, 0, 0)
@@ -370,9 +377,9 @@ class Window(QtGui.QMainWindow):
 
     def show_reference_p_cbox_changed(self):
         if self.show_reference_p_cbox.isChecked():
-            self.pw.addItem(self.ref_data)
+            self.pw.addItem(self.vline_ref)
         else:
-            self.pw.removeItem(self.ref_data)
+            self.pw.removeItem(self.vline_ref)
 
     def show_target_p_cbox_changed(self):
         if self.show_target_p_cbox.isChecked():
@@ -390,15 +397,38 @@ class Window(QtGui.QMainWindow):
         target_lambda = core.lambda_0_t_user * ((target_pressure * core.beta / core.alpha + 1) ** (1 / core.beta))
         self.vline_target.setX(target_lambda)
         self.show_target_p_lambda.setText('%.3f' % target_lambda)
+        self.calculate_deltas()
+
+    def show_target_p_delta_changed(self):
+        delta_p = float(self.show_target_p_delta.text())
+        fit_p = float(self.pressure_fit_display.text())
+        target_p = fit_p + delta_p
+        self.show_target_p_pressure.setText('%.2f' % target_p)
+        self.show_target_p_pressure_changed()
 
     def target_line_moved(self):
         target_lambda = self.vline_target.getXPos()
         self.show_target_p_lambda.setText('%.3f' % target_lambda)
-        calculate_target_pressure(float(target_lambda))
+        self.calculate_target_pressure(target_lambda)
+        self.calculate_deltas()
+
+    def calculate_target_p_lambda(self):
+        target_pressure = float(self.show_target_p_pressure.text())
+        target_lambda = core.lambda_0_t_user * ((target_pressure * core.beta / core.alpha + 1) ** (1 / core.beta))
+        self.show_target_p_lambda.setText('%.3f' % target_lambda)
+        self.show_target_p_lambda_changed()
 
     def calculate_target_pressure(self, lambda_r1):
         target_pressure = core.alpha * ((1 / core.beta) * (((lambda_r1 / core.lambda_0_t_user) ** core.beta) - 1))
         self.show_target_p_pressure.setText('%.2f' % target_pressure)
+        self.calculate_deltas()
+
+    def calculate_deltas(self):
+        fit_p = float(self.pressure_fit_display.text())
+        ref_p = float(self.show_ref_p_pressure.text())
+        target_p = float(self.show_target_p_pressure.text())
+        self.show_ref_p_delta.setText('%.2f' % (ref_p - fit_p))
+        self.show_target_p_delta.setText('%.2f' % (target_p - fit_p))
 
     def zoom_full(self):
         self.pw.setXRange(core.xs[0], core.xs[-1])
@@ -409,12 +439,12 @@ class Window(QtGui.QMainWindow):
     # class methods for pressure control
     def calculate_lambda_0_t(self):
         offset = core.lambda_0_user - core.lambda_0_ref
-        t = float(self.temperature_input.text())
+        t = self.temperature_input.value()
         lambda_0_t = 10000000 / (14423.0 + 0.0446*t - 0.000481*t*t + 0.000000371*t*t*t)
         core.lambda_0_t_user = lambda_0_t + offset
-        self.lambda_naught_t_display.setText('%.3f' % core.lambda_0_t_user + ' nm')
+        self.lambda_naught_t_display.setText('%.3f' % core.lambda_0_t_user)
         calculate_pressure(core.lambda_r1)
-        calculate_target_pressure(float(self.show_target_p_lambda.text()))
+        self.calculate_target_p_lambda()
 
 
 class CoreData:
@@ -506,7 +536,7 @@ def fit_spectrum():
     # fit
     popt, pcov = curve_fit(double_pseudo, core.xs, core.ys, p0=p0)
 
-    gui.lambda_r1_display.setText('%.3f' % popt[5] + ' nm')
+    gui.lambda_r1_display.setText('%.3f' % popt[5])
 
     gui.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt), pen=(255, 0, 0))
     gui.r1_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
@@ -516,19 +546,13 @@ def fit_spectrum():
     # calculate pressure
     core.lambda_r1 = popt[5]
     calculate_pressure(core.lambda_r1)
-    gui.pressure_fit_display.setText('%.2f' % core.pressure + ' GPa')
     gui.vline_press.setPos(popt[5])
 
 
 def calculate_pressure(lambda_r1):
     core.pressure = core.alpha * ((1 / core.beta) * (((lambda_r1 / core.lambda_0_t_user) ** core.beta) - 1))
-    gui.pressure_fit_display.setText('%.2f' % core.pressure + ' GPa')
-
-
-def calculate_target_p_lambda():
-    target_pressure = float(gui.show_target_p_pressure.text())
-    target_lambda = core.lambda_0_t_user * ((target_pressure*core.beta/core.alpha + 1)**(1/core.beta))
-    print target_lambda
+    gui.pressure_fit_display.setText('%.2f' % core.pressure)
+    gui.calculate_deltas()
 
 
 def calculate_target_pressure(lambda_r1):
