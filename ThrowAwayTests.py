@@ -28,20 +28,48 @@
 # ###pressure = alpha * ((1 / beta) * (((r_one_measured / r_one_t_corrected) ** beta) - 1))
 # ###print pressure
 
-from PyQt4 import QtGui,QtCore
 import sys
+from PyQt4.Qt import *
 
-class MainWindow(QtGui.QMainWindow):
-    def __init__(self, parent=None):
-        QtGui.QMainWindow.__init__(self, parent)
-        button = QtGui.QPushButton("TEST")
-        self.setCentralWidget(button)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("add.png"))
-        button.setIcon(icon)
+class MyPopup(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+
+    def paintEvent(self, e):
+        dc = QPainter(self)
+        dc.drawLine(0, 0, 100, 100)
+        dc.drawLine(100, 0, 0, 100)
+
+class MainWindow(QMainWindow):
+    def __init__(self, *args):
+        QMainWindow.__init__(self, *args)
+        self.cw = QWidget(self)
+        self.setCentralWidget(self.cw)
+        self.btn1 = QPushButton("Click me", self.cw)
+        self.btn1.setGeometry(QRect(0, 0, 100, 30))
+        self.connect(self.btn1, SIGNAL("clicked()"), self.doit)
+        self.w = None
+
+    def doit(self):
+        print "Opening a new popup window..."
+        self.w = MyPopup()
+        self.w.setGeometry(QRect(100, 100, 400, 200))
+        self.w.show()
+
+class App(QApplication):
+    def __init__(self, *args):
+        QApplication.__init__(self, *args)
+        self.main = MainWindow()
+        self.connect(self, SIGNAL("lastWindowClosed()"), self.byebye )
+        self.main.show()
+
+    def byebye( self ):
+        self.exit(0)
+
+def main(args):
+    global app
+    app = App(args)
+    app.exec_()
 
 if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
-    main = MainWindow()
-    main.show()
-    app.exec_()
+    main(sys.argv)
