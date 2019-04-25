@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
         self.btn1 = QPushButton("Click me", self.cw)
         self.btn1.setGeometry(QRect(0, 0, 100, 30))
         self.connect(self.btn1, SIGNAL("clicked()"), self.doit)
+        self.label = QLabel('hi', self.cw)
         self.w = None
 
     def doit(self):

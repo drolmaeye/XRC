@@ -143,10 +143,10 @@ class Window(QtGui.QMainWindow):
         self.pw = pg.PlotWidget(name='Plot1')
 
         # ###EXPERIMENT WITH STYLE###
-        self.pw.setTitle('Amazing', size='12pt')
-        label_style = {'color': '#808080', 'font-size': '11px'}
+        self.pw.setTitle('Spectrum', size='12pt')
+        # label_style = {'color': '#808080', 'font-size': '11px'}
         self.pw.plotItem.getAxis('left').enableAutoSIPrefix(False)
-        self.pw.setLabel('left', 'Intensity', units='counts', **label_style)
+        self.pw.setLabel('left', 'Intensity', units='counts')#, **label_style)
         self.pw.setLabel('bottom', 'Wavelength', units='nm')
 
         # create plot items (need to be added when necessary)
@@ -178,6 +178,7 @@ class Window(QtGui.QMainWindow):
         # create signal for target pressure line
         self.vline_target.sigPositionChanged.connect(self.target_line_moved)
 
+        # ###LAYOUT MANAGEMENT###
         # make layout for plot window and control window and add to main window
         self.bottom_layout = QtGui.QHBoxLayout()
         self.mw_layout.addLayout(self.bottom_layout)
@@ -203,7 +204,7 @@ class Window(QtGui.QMainWindow):
         self.spec_control = QtGui.QGroupBox()
         self.spec_control.setTitle('Spectrum Control')
         self.cw_layout.addWidget(self.spec_control)
-        self.cw_layout.addSpacing(20)
+        self.cw_layout.addSpacing(10)
 
         # make and set layout to Spectrum Control QGroupBox
         self.spec_control_layout = QtGui.QVBoxLayout()
@@ -257,14 +258,14 @@ class Window(QtGui.QMainWindow):
         self.spec_control_layout.addLayout(self.average_spec_layout)
 
         '''
-        Plot control window v2
+        Plot control window
         '''
 
         # make middle-right widget for plot control
         self.plot_control = QtGui.QGroupBox()
         self.plot_control.setTitle('Plot Control')
         self.cw_layout.addWidget(self.plot_control)
-        self.cw_layout.addSpacing(20)
+        self.cw_layout.addSpacing(10)
 
         # make and set primary layout for Plot Control QGroupBox
         self.plot_control_layout = QtGui.QVBoxLayout()
@@ -276,7 +277,7 @@ class Window(QtGui.QMainWindow):
         # create show curves label and checkboxes
         self.show_fits_label = QtGui.QLabel('Select fitted data to show')
         self.show_curve_cbox = QtGui.QCheckBox('Curve')
-        self.show_line_cbox = QtGui.QCheckBox('Line')
+
         self.show_r1r2_cbox = QtGui.QCheckBox('R1, R2')
         self.show_bg_cbox = QtGui.QCheckBox('Background')
         #  create show reference lines labels, cboxes, data displays, data inputs
@@ -284,6 +285,7 @@ class Window(QtGui.QMainWindow):
         self.markers_lambda_heading = QtGui.QLabel(u'\u03BB' + ' (nm)')
         self.markers_pressure_heading = QtGui.QLabel('P (GPa)')
         self.markers_delta_p_heading = QtGui.QLabel(u'\u0394' + 'P (GPa)')
+        self.show_fit_p_cbox = QtGui.QCheckBox('P(fit)')
         self.show_reference_p_cbox = QtGui.QCheckBox('P(ref)')
         self.show_ref_p_lambda = QtGui.QLabel('694.260')
         self.show_ref_p_pressure = QtGui.QLabel('0.00')
@@ -303,9 +305,9 @@ class Window(QtGui.QMainWindow):
 
         # connect plot control signals
         self.show_curve_cbox.stateChanged.connect(self.show_curve_cbox_changed)
-        self.show_line_cbox.stateChanged.connect(self.show_line_cbox_changed)
         self.show_r1r2_cbox.stateChanged.connect(self.show_r1r2_cbox_changed)
         self.show_bg_cbox.stateChanged.connect(self.show_bg_cbox_changed)
+        self.show_fit_p_cbox.stateChanged.connect(self.show_fit_p_cbox_changed)
         self.show_reference_p_cbox.stateChanged.connect(self.show_reference_p_cbox_changed)
         self.show_target_p_cbox.stateChanged.connect(self.show_target_p_cbox_changed)
         self.show_target_p_lambda.editingFinished.connect(self.show_target_p_lambda_changed)
@@ -321,41 +323,41 @@ class Window(QtGui.QMainWindow):
 
         self.reference_curves_layout = QtGui.QHBoxLayout()
         self.reference_curves_layout.addWidget(self.show_curve_cbox)
-        self.reference_curves_layout.addWidget(self.show_line_cbox)
+        # self.reference_curves_layout.addWidget(self.show_fit_p_cbox)
         self.reference_curves_layout.addWidget(self.show_r1r2_cbox)
         self.reference_curves_layout.addWidget(self.show_bg_cbox)
         self.plot_control_layout.addLayout(self.reference_curves_layout)
 
-        self.plot_control_layout.addSpacing(15)
+        self.plot_control_layout.addSpacing(10)
 
         self.plot_control_layout.addWidget(self.show_refs_label)
 
         self.reference_lines_layout = QtGui.QGridLayout()
         # self.reference_lines_layout.addWidget(self.show_fitted_p_cbox, 0, 0)
-        self.reference_lines_layout.addWidget(self.markers_lambda_heading, 0, 1)
-        self.reference_lines_layout.addWidget(self.markers_pressure_heading, 0, 2)
-        self.reference_lines_layout.addWidget(self.markers_delta_p_heading, 0, 3)
-        self.reference_lines_layout.addWidget(self.show_reference_p_cbox, 1, 0)
-        self.reference_lines_layout.addWidget(self.show_ref_p_lambda, 1, 1)
-        self.reference_lines_layout.addWidget(self.show_ref_p_pressure, 1, 2)
-        self.reference_lines_layout.addWidget(self.show_ref_p_delta, 1, 3)
-        self.reference_lines_layout.addWidget(self.show_target_p_cbox, 2, 0)
-        self.reference_lines_layout.addWidget(self.show_target_p_lambda, 2, 1)
-        self.reference_lines_layout.addWidget(self.show_target_p_pressure, 2, 2)
-        self.reference_lines_layout.addWidget(self.show_target_p_delta, 2, 3)
+        self.reference_lines_layout.addWidget(self.markers_lambda_heading, 1, 1)
+        self.reference_lines_layout.addWidget(self.markers_pressure_heading, 1, 2)
+        self.reference_lines_layout.addWidget(self.markers_delta_p_heading, 1, 3)
+        self.reference_lines_layout.addWidget(self.show_fit_p_cbox, 1, 0)
+        self.reference_lines_layout.addWidget(self.show_reference_p_cbox, 2, 0)
+        self.reference_lines_layout.addWidget(self.show_ref_p_lambda, 2, 1)
+        self.reference_lines_layout.addWidget(self.show_ref_p_pressure, 2, 2)
+        self.reference_lines_layout.addWidget(self.show_ref_p_delta, 2, 3)
+        self.reference_lines_layout.addWidget(self.show_target_p_cbox, 3, 0)
+        self.reference_lines_layout.addWidget(self.show_target_p_lambda, 3, 1)
+        self.reference_lines_layout.addWidget(self.show_target_p_pressure, 3, 2)
+        self.reference_lines_layout.addWidget(self.show_target_p_delta, 3, 3)
         self.plot_control_layout.addLayout(self.reference_lines_layout)
 
-        self.plot_control_layout.addSpacing(15)
+        self.plot_control_layout.addSpacing(10)
 
         self.plot_control_layout.addWidget(self.set_ref_p_label)
 
         self.set_reference_layout = QtGui.QHBoxLayout()
-        # self.set_reference_layout.addWidget(self.set_ref_p_label)
         self.set_reference_layout.addWidget(self.set_ref_fit_btn)
         self.set_reference_layout.addWidget(self.set_ref_target_btn)
         self.plot_control_layout.addLayout(self.set_reference_layout)
 
-        self.plot_control_layout.addSpacing(15)
+        self.plot_control_layout.addSpacing(10)
 
         self.zoom_buttons_layout = QtGui.QHBoxLayout()
         self.zoom_buttons_layout.addWidget(self.zoom_full_btn)
@@ -364,7 +366,7 @@ class Window(QtGui.QMainWindow):
         self.plot_control_layout.addLayout(self.zoom_buttons_layout)
 
         '''
-        Pressure Control Window
+        Pressure Control window
         '''
 
         # make bottom right widget for Pressure control
@@ -388,17 +390,24 @@ class Window(QtGui.QMainWindow):
         self.lambda_naught_t_display = QtGui.QLabel('694.260')
         self.lambda_r1_label = QtGui.QLabel(u'\u03BB' + '<sub>R1</sub>' + ' (nm)')
         self.lambda_r1_display = QtGui.QLabel('694.260')
-        self.temperature_label = QtGui.QLabel('Temperature (K)')
+        self.threshold_label = QtGui.QLabel('Fit threshold')
+        self.threshold_min_input = QtGui.QSpinBox()
+        self.threshold_min_input.setRange(0, 16000)
+        self.threshold_min_input.setValue(200)
+        self.threshold_min_input.setSingleStep(100)
+        # self.threshold_min_input.setMaximumWidth(50)
+        self.temperature_label = QtGui.QLabel('T(K)')
+        self.temperature_label.setStyleSheet('QLabel {font: bold 18px}')
         self.temperature_input = QtGui.QSpinBox()
+        self.temperature_input.setStyleSheet('QSpinBox {font: bold 24px}')
         self.temperature_input.setRange(4, 600)
         self.temperature_input.setValue(295)
         self.temperature_track_cbox = QtGui.QCheckBox('Track')
-        self.threshold_label = QtGui.QLabel('Fit threshold')
-        self.threshold_min_input = QtGui.QLineEdit('200')
-        self.threshold_min_input.setValidator(QtGui.QIntValidator())
-        self.pressure_fit_label = QtGui.QLabel('P<sub>fit</sub>(GPa)')
+        self.temperature_track_cbox.setEnabled(False)
+        self.pressure_fit_label = QtGui.QLabel('P(GPa)')
         self.pressure_fit_label.setStyleSheet('QLabel {font: bold 18px}')
         self.pressure_fit_display = QtGui.QLabel('0.00')
+        self.pressure_fit_display.setMinimumWidth(100)
         self.pressure_fit_display.setStyleSheet('QLabel {font: bold 36px}')
         self.fit_warning_display = QtGui.QLabel('')
 
@@ -414,14 +423,90 @@ class Window(QtGui.QMainWindow):
         self.press_control_layout.addWidget(self.lambda_naught_t_display, 2, 1)
         self.press_control_layout.addWidget(self.lambda_r1_label, 3, 0)
         self.press_control_layout.addWidget(self.lambda_r1_display, 3, 1)
-        self.press_control_layout.addWidget(self.temperature_label, 4, 0)
-        self.press_control_layout.addWidget(self.temperature_input, 4, 1)
-        self.press_control_layout.addWidget(self.temperature_track_cbox, 4, 2)
-        self.press_control_layout.addWidget(self.threshold_label, 5, 0)
-        self.press_control_layout.addWidget(self.threshold_min_input, 5, 1)
+        self.press_control_layout.addWidget(self.threshold_label, 4, 0)
+        self.press_control_layout.addWidget(self.threshold_min_input, 4, 1)
+        self.press_control_layout.addWidget(self.temperature_label, 5, 0)
+        self.press_control_layout.addWidget(self.temperature_input, 5, 1)
+        self.press_control_layout.addWidget(self.temperature_track_cbox, 5, 2)
         self.press_control_layout.addWidget(self.pressure_fit_label, 6, 0)
         self.press_control_layout.addWidget(self.pressure_fit_display, 6, 1)
         self.press_control_layout.addWidget(self.fit_warning_display, 6, 2)
+
+        '''
+        Options window
+        '''
+
+        self.ow = QtGui.QTabWidget()
+
+        # ###PRESSURE CALIBRATION###
+        # make pressure calibration tab
+        self.p_calibration_tab = QtGui.QWidget()
+        self.p_calibration_tab_layout = QtGui.QVBoxLayout()
+        self.p_calibration_tab.setLayout(self.p_calibration_tab_layout)
+
+        # make Group Box for lambda naught
+        self.set_lambda_naught_gb = QtGui.QGroupBox()
+        self.set_lambda_naught_gb.setTitle('Reference wavelength')
+        self.p_calibration_tab_layout.addWidget(self.set_lambda_naught_gb)
+        self.set_lambda_naught_gb_layout = QtGui.QVBoxLayout()
+        self.set_lambda_naught_gb.setLayout(self.set_lambda_naught_gb_layout)
+
+        # make widgets for lambda naught
+        self.manual_lambda_naught_label = QtGui.QLabel('Enter user-defined ' + u'\u03BB' + '<sub>0</sub>' + '(295) here')
+        self.manual_lambda_naught_input = QtGui.QLineEdit('694.260')
+        self.auto_lambda_naught_btn = QtGui.QPushButton('Get ' + u'\u03BB' + '(295) from fit')
+
+        # connect signals
+        self.manual_lambda_naught_input.returnPressed.connect(lambda: self.set_lambda_naught('manual'))
+        self.auto_lambda_naught_btn.clicked.connect(lambda: self.set_lambda_naught('auto'))
+
+        # add lambda naught widgets to set lambda naught gb layout
+        self.manual_lambda_naught_layout = QtGui.QHBoxLayout()
+        self.manual_lambda_naught_layout.addWidget(self.manual_lambda_naught_label)
+        self.manual_lambda_naught_layout.addWidget(self.manual_lambda_naught_input)
+        self.set_lambda_naught_gb_layout.addLayout(self.manual_lambda_naught_layout)
+
+        self.set_lambda_naught_gb_layout.addWidget(self.auto_lambda_naught_btn)
+
+        # make Group Box for Calibration selection
+        self.set_p_calibration_gb = QtGui.QGroupBox()
+        self.set_p_calibration_gb.setTitle('Pressure Calibration')
+        self.p_calibration_tab_layout.addWidget(self.set_p_calibration_gb)
+        self.set_p_calibration_gb_layout = QtGui.QVBoxLayout()
+        self.set_p_calibration_gb.setLayout(self.set_p_calibration_gb_layout)
+
+        # make widgets for calibration selection
+        self.choose_calibration_drop = QtGui.QComboBox()
+        self.choose_calibration_drop.addItems(['Dorogokupets', 'Mao', 'Dewaele'])
+        self.p_calibration_alpha_label = QtGui.QLabel(u'\u03B1')
+        self.p_calibration_alpha_display = QtGui.QLabel('1885')
+        self.p_calibration_beta_label = QtGui.QLabel(u'\u03B2')
+        self.p_calibration_beta_display = QtGui.QLabel('11.0')
+        self.calculation_label = QtGui.QLabel(u'\u03B1' + '/' + u'\u03B2')
+
+
+        # connect signal
+        self.choose_calibration_drop.currentIndexChanged.connect(self.set_new_p_calibration)
+
+        # add widgets to layout
+        self.set_p_calibration_gb_layout.addWidget(self.choose_calibration_drop)
+
+        self.p_cal_constants_layout = QtGui.QHBoxLayout()
+        self.p_cal_constants_layout.addWidget(self.p_calibration_alpha_label)
+        self.p_cal_constants_layout.addWidget(self.p_calibration_alpha_display)
+        self.p_cal_constants_layout.addWidget(self.p_calibration_beta_label)
+        self.p_cal_constants_layout.addWidget(self.p_calibration_beta_display)
+        self.set_p_calibration_gb_layout.addLayout(self.p_cal_constants_layout)
+
+        self.set_p_calibration_gb_layout.addWidget(self.calculation_label)
+
+
+
+
+
+
+        self.ow.addTab(self.p_calibration_tab, 'P Calibration')
+        # self.ow.show()
 
         # from Clemens' Dioptas
         # file = open(os.path.join("stylesheet.qss"))
@@ -435,17 +520,7 @@ class Window(QtGui.QMainWindow):
     Class methods
     '''
 
-    # class methods for tabs
-    def set_lambda_naught(self, source):
-        if source == 'fit':
-            core.lambda_0_user = core.lambda_r1
-            self.set_ref_from_fit()
-        elif source == 'target':
-            core.lambda_0_user = float(self.show_target_p_lambda.text())
-            self.set_ref_from_target()
-        self.lambda_naught_295_display.setText('%.3f' % core.lambda_0_t_user)
-        calculate_pressure(core.lambda_r1)
-        self.calculate_deltas()
+
 
 
     # class methods for spectrum control
@@ -477,8 +552,8 @@ class Window(QtGui.QMainWindow):
         else:
             self.pw.removeItem(self.fit_data)
 
-    def show_line_cbox_changed(self):
-        if self.show_line_cbox.isChecked():
+    def show_fit_p_cbox_changed(self):
+        if self.show_fit_p_cbox.isChecked():
             self.pw.addItem(self.vline_press)
         else:
             self.pw.removeItem(self.vline_press)
@@ -572,8 +647,17 @@ class Window(QtGui.QMainWindow):
 
     # class methods for pressure control
     def calculate_lambda_0_t(self):
-        offset = core.lambda_0_user - core.lambda_0_ref
         t = self.temperature_input.value()
+        cold_style = 'QSpinBox {background-color: #add8e6; font: bold 24px}'
+        hot_style = 'QSpinBox {background-color: #ffb347; font: bold 24px}'
+        rt_style = 'QSpinBox {background-color: #ffffff; font: bold 24px}'
+        if t < 295:
+            self.temperature_input.setStyleSheet(cold_style)
+        elif t > 295:
+            self.temperature_input.setStyleSheet(hot_style)
+        else:
+            self.temperature_input.setStyleSheet(rt_style)
+        offset = core.lambda_0_user - core.lambda_0_ref
         lambda_0_t = 10000000 / (14423.0 + 0.0446*t - 0.000481*t*t + 0.000000371*t*t*t)
         core.lambda_0_t_user = lambda_0_t + offset
         self.lambda_naught_t_display.setText('%.3f' % core.lambda_0_t_user)
@@ -584,6 +668,40 @@ class Window(QtGui.QMainWindow):
         self.show_ref_p_lambda.setText('%.3f' % core.lambda_r1)
         self.show_ref_p_pressure.setText('%.3f' % core.pressure)
         self.vline_ref.setValue(core.lambda_r1)
+        self.calculate_deltas()
+
+    # class methods for tabs
+    def set_lambda_naught(self, source):
+        if source == 'manual':
+            new_lambda = float(self.manual_lambda_naught_input.text())
+        elif source == 'auto':
+            new_lambda = core.lambda_r1
+        core.lambda_0_user = new_lambda
+        self.lambda_naught_295_display.setText('%.3f' % new_lambda)
+        self.calculate_lambda_0_t()
+        # TODO code to save new lambda to ini-type file
+
+    def set_new_p_calibration(self):
+        index = self.choose_calibration_drop.currentIndex()
+        if index == 0:
+            calibration = 'Dorogokupets'
+            a = 1885
+            b = 11.0
+        elif index == 1:
+            calibration = 'Mao'
+            a = 1904
+            b = 7.665
+        elif index == 2:
+            calibration = 'Dewaele'
+            a = 1904
+            b = 9.5
+        self.press_calibration_display.setText(calibration)
+        core.alpha = a
+        core.beta = b
+        self.p_calibration_alpha_display.setText(str(a))
+        self.p_calibration_beta_display.setText(str(b))
+        calculate_pressure(core.lambda_r1)
+        self.calculate_target_pressure(float(self.show_target_p_lambda.text()))
         self.calculate_deltas()
 
 
@@ -601,6 +719,11 @@ class CoreData:
         # initial real and dummy spectra
         self.xs = self.spec.wavelengths()
         self.ys = self.spec.intensities()
+        print np.abs(self.xs-693).argmin()
+        print self.xs[436]
+        print np.abs(self.xs-743).argmin()
+        print self.xs[1478]
+
         self.xs_roi = np.zeros(300)
         self.ys_roi = np.zeros(300)
 
@@ -673,7 +796,7 @@ def fit_spectrum():
     r2_height = r1_height / 2.0
 
     # check r1_height is greater than fitting threshold and not saturated
-    threshold = int(gui.threshold_min_input.text())
+    threshold = gui.threshold_min_input.value()
     if r1_height < threshold:
         gui.fit_warning_display.setText('Too weak')
         return
