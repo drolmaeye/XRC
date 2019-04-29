@@ -35,50 +35,51 @@ class Window(QtGui.QMainWindow):
         self.mw.setLayout(self.mw_layout)
 
 
-        '''
-        Menu bar
-        '''
-
-        self.main_menu = self.menuBar()
-        self.file_menu = self.main_menu.addMenu('File')
-        self.options_menu = self.main_menu.addMenu('Options')
-
-        '''
-        Options Tab
-        '''
-
-        self.options_window = QtGui.QTabWidget()
-
-        # make p calibration tab and widgets
-        self.p_calibration_tab = QtGui.QWidget()
-        self.p_calibration_tab_layout = QtGui.QVBoxLayout()
-        self.p_calibration_tab.setLayout(self.p_calibration_tab_layout)
-
-        # lambda naught options
-        self.set_lambda_naught_gb = QtGui.QGroupBox()
-        self.p_calibration_tab_layout.addWidget(self.set_lambda_naught_gb)
-        self.set_lambda_naught_gb.setTitle(u'\u03BB' + '<sub>0</sub>' + '(295)')
-        self.set_lambda_naught_label = QtGui.QLabel('Define' + u'\u03BB' + '<sub>0</sub>(295) from:')
-        self.lambda_from_fit_btn = QtGui.QPushButton('Fit')
-        self.lambda_from_target_btn = QtGui.QPushButton('Target')
-
-        # connect signals
-        self.lambda_from_fit_btn.clicked.connect(lambda: self.set_lambda_naught('fit'))
-        self.lambda_from_target_btn.clicked.connect(lambda: self.set_lambda_naught('target'))
-
-        # add widgets to layout
-        self.set_lambda_naught_vb = QtGui.QVBoxLayout()
-        self.set_lambda_naught_gb.setLayout(self.set_lambda_naught_vb)
-        self.set_lambda_naught_vb.addWidget(self.set_lambda_naught_label)
-
-        self.set_lambda_btns_layout = QtGui.QHBoxLayout()
-        self.set_lambda_btns_layout.addWidget(self.lambda_from_fit_btn)
-        self.set_lambda_btns_layout.addWidget(self.lambda_from_target_btn)
-        self.set_lambda_naught_vb.addLayout(self.set_lambda_btns_layout)
-
-        self.options_window.addTab(self.p_calibration_tab, 'P Calibration')
-
-        self.options_window.show()
+        # TODO figure out menu bar
+        # '''
+        # Menu bar
+        # '''
+        # 
+        # self.main_menu = self.menuBar()
+        # self.file_menu = self.main_menu.addMenu('File')
+        # self.options_menu = self.main_menu.addMenu('Options')
+        # 
+        # '''
+        # Options Tab
+        # '''
+        # 
+        # self.options_window = QtGui.QTabWidget()
+        # 
+        # # make p calibration tab and widgets
+        # self.p_calibration_tab = QtGui.QWidget()
+        # self.p_calibration_tab_layout = QtGui.QVBoxLayout()
+        # self.p_calibration_tab.setLayout(self.p_calibration_tab_layout)
+        # 
+        # # lambda naught options
+        # self.set_lambda_naught_gb = QtGui.QGroupBox()
+        # self.p_calibration_tab_layout.addWidget(self.set_lambda_naught_gb)
+        # self.set_lambda_naught_gb.setTitle(u'\u03BB' + '<sub>0</sub>' + '(295)')
+        # self.set_lambda_naught_label = QtGui.QLabel('Define' + u'\u03BB' + '<sub>0</sub>(295) from:')
+        # self.lambda_from_fit_btn = QtGui.QPushButton('Fit')
+        # self.lambda_from_target_btn = QtGui.QPushButton('Target')
+        # 
+        # # connect signals
+        # self.lambda_from_fit_btn.clicked.connect(lambda: self.set_lambda_naught('fit'))
+        # self.lambda_from_target_btn.clicked.connect(lambda: self.set_lambda_naught('target'))
+        # 
+        # # add widgets to layout
+        # self.set_lambda_naught_vb = QtGui.QVBoxLayout()
+        # self.set_lambda_naught_gb.setLayout(self.set_lambda_naught_vb)
+        # self.set_lambda_naught_vb.addWidget(self.set_lambda_naught_label)
+        # 
+        # self.set_lambda_btns_layout = QtGui.QHBoxLayout()
+        # self.set_lambda_btns_layout.addWidget(self.lambda_from_fit_btn)
+        # self.set_lambda_btns_layout.addWidget(self.lambda_from_target_btn)
+        # self.set_lambda_naught_vb.addLayout(self.set_lambda_btns_layout)
+        # 
+        # self.options_window.addTab(self.p_calibration_tab, 'P Calibration')
+        # 
+        # self.options_window.show()
 
         '''
         Custom Toolbar
