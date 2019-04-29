@@ -274,8 +274,43 @@ class Window(QtGui.QMainWindow):
 
         # ### make and add individual widgets to plot control
 
+        # custom checked styles for checkbuttons
+        showcurve_style = 'QPushButton::checked {border:4px solid red}'
+        showr1r2_style = 'QPushButton::checked {border:4px solid green}'
+        showbg_style = 'QPushButton::checked {border:4px solid cyan}'
+        showfit_style = 'QPushButton::checked {border:4px solid red}'
+        showref_style = 'QPushButton::checked {border:4px solid magenta}'
+        showtarget_style = 'QPushButton::checked {border:4px solid yellow}'
+
         # create show curves label and checkboxes
         self.show_fits_label = QtGui.QLabel('Select fitted data to show')
+        self.show_curve_cbtn = QtGui.QPushButton('Curve')
+        self.show_curve_cbtn.setCheckable(True)
+        self.show_curve_cbtn.setStyleSheet(showcurve_style)
+        self.show_r1r2_cbtn = QtGui.QPushButton('R1, R2')
+        self.show_r1r2_cbtn.setCheckable(True)
+        self.show_r1r2_cbtn.setStyleSheet(showr1r2_style)
+        self.show_bg_cbtn = QtGui.QPushButton('Background')
+        self.show_bg_cbtn.setCheckable(True)
+        self.show_bg_cbtn.setStyleSheet(showbg_style)
+        self.show_fit_p_cbtn = QtGui.QPushButton('P(fit)')
+        self.show_fit_p_cbtn.setCheckable(True)
+        self.show_fit_p_cbtn.setStyleSheet(showfit_style)
+        self.show_ref_p_cbtn = QtGui.QPushButton('P(ref)')
+        self.show_ref_p_cbtn.setCheckable(True)
+        self.show_ref_p_cbtn.setStyleSheet(showref_style)
+        self.show_target_p_cbtn = QtGui.QPushButton('P(target)')
+        self.show_target_p_cbtn.setCheckable(True)
+        self.show_target_p_cbtn.setStyleSheet(showtarget_style)
+
+
+
+
+
+
+
+
+
         self.show_curve_cbox = QtGui.QCheckBox('Curve')
 
         self.show_r1r2_cbox = QtGui.QCheckBox('R1, R2')
@@ -286,6 +321,10 @@ class Window(QtGui.QMainWindow):
         self.markers_pressure_heading = QtGui.QLabel('P (GPa)')
         self.markers_delta_p_heading = QtGui.QLabel(u'\u0394' + 'P (GPa)')
         self.show_fit_p_cbox = QtGui.QCheckBox('P(fit)')
+        self.show_fit_p_cbtn = QtGui.QPushButton('P(fit)')
+        self.show_fit_p_cbtn.setCheckable(True)
+        showfit_style = 'QPushButton::checked {border:4px solid cyan}'
+        self.show_fit_p_cbtn.setStyleSheet(showfit_style)
         self.show_reference_p_cbox = QtGui.QCheckBox('P(ref)')
         self.show_ref_p_lambda = QtGui.QLabel('694.260')
         self.show_ref_p_pressure = QtGui.QLabel('0.00')
@@ -305,10 +344,13 @@ class Window(QtGui.QMainWindow):
         self.autoscale_cbox = QtGui.QCheckBox('Autoscale')
 
         # connect plot control signals
+
+
         self.show_curve_cbox.stateChanged.connect(self.show_curve_cbox_changed)
         self.show_r1r2_cbox.stateChanged.connect(self.show_r1r2_cbox_changed)
         self.show_bg_cbox.stateChanged.connect(self.show_bg_cbox_changed)
         self.show_fit_p_cbox.stateChanged.connect(self.show_fit_p_cbox_changed)
+        self.show_fit_p_cbtn.clicked.connect(self.show_fit_p_cbtn_clicked)
         self.show_reference_p_cbox.stateChanged.connect(self.show_reference_p_cbox_changed)
         self.show_target_p_cbox.stateChanged.connect(self.show_target_p_cbox_changed)
         self.show_target_p_lambda.editingFinished.connect(self.show_target_p_lambda_changed)
@@ -336,10 +378,10 @@ class Window(QtGui.QMainWindow):
         self.plot_control_layout.addWidget(self.show_fits_label)
 
         self.reference_curves_layout = QtGui.QHBoxLayout()
-        self.reference_curves_layout.addWidget(self.show_curve_cbox)
+        self.reference_curves_layout.addWidget(self.show_curve_cbtn)
         # self.reference_curves_layout.addWidget(self.show_fit_p_cbox)
-        self.reference_curves_layout.addWidget(self.show_r1r2_cbox)
-        self.reference_curves_layout.addWidget(self.show_bg_cbox)
+        self.reference_curves_layout.addWidget(self.show_r1r2_cbtn)
+        self.reference_curves_layout.addWidget(self.show_bg_cbtn)
         self.plot_control_layout.addLayout(self.reference_curves_layout)
 
         self.plot_control_layout.addSpacing(10)
@@ -351,12 +393,13 @@ class Window(QtGui.QMainWindow):
         self.reference_lines_layout.addWidget(self.markers_lambda_heading, 1, 1)
         self.reference_lines_layout.addWidget(self.markers_pressure_heading, 1, 2)
         self.reference_lines_layout.addWidget(self.markers_delta_p_heading, 1, 3)
-        self.reference_lines_layout.addWidget(self.show_fit_p_cbox, 1, 0)
-        self.reference_lines_layout.addWidget(self.show_reference_p_cbox, 2, 0)
+        # self.reference_lines_layout.addWidget(self.show_fit_p_cbox, 1, 0)
+        self.reference_lines_layout.addWidget(self.show_fit_p_cbtn, 1, 0)
+        self.reference_lines_layout.addWidget(self.show_ref_p_cbtn, 2, 0)
         self.reference_lines_layout.addWidget(self.show_ref_p_lambda, 2, 1)
         self.reference_lines_layout.addWidget(self.show_ref_p_pressure, 2, 2)
         self.reference_lines_layout.addWidget(self.show_ref_p_delta, 2, 3)
-        self.reference_lines_layout.addWidget(self.show_target_p_cbox, 3, 0)
+        self.reference_lines_layout.addWidget(self.show_target_p_cbtn, 3, 0)
         self.reference_lines_layout.addWidget(self.show_target_p_lambda, 3, 1)
         self.reference_lines_layout.addWidget(self.show_target_p_pressure, 3, 2)
         self.reference_lines_layout.addWidget(self.show_target_p_delta, 3, 3)
@@ -591,6 +634,12 @@ class Window(QtGui.QMainWindow):
             self.pw.addItem(self.bg_data)
         else:
             self.pw.removeItem(self.bg_data)
+
+    def show_fit_p_cbtn_clicked(self):
+        if self.show_fit_p_cbtn.isChecked():
+            self.pw.addItem(self.vline_press)
+        else:
+            self.pw.removeItem(self.vline_press)
 
     def show_reference_p_cbox_changed(self):
         if self.show_reference_p_cbox.isChecked():

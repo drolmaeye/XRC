@@ -15,13 +15,9 @@ from scipy.optimize import curve_fit
 from scipy import exp, asarray
 from math import cos, sin, radians, pi, sqrt
 import os
-from ThrowAwayTests import myThread
+
 
 class Window(QtGui.QMainWindow):
-
-    def thread_callback(self, data):
-        print data
-
 
     def __init__(self):
         # use QMainWindow in this early version to benefit from menu, tool bar, etc.
@@ -37,10 +33,10 @@ class Window(QtGui.QMainWindow):
         # now make and set layout for the mw (main window)
         self.mw_layout = QtGui.QVBoxLayout()
         self.mw.setLayout(self.mw_layout)
-        self.my_thread = myThread(self)
 
-        self.my_thread.start()
-        self.my_thread.callBackSignal.connect(self.thread_callback)
+        # thread experiment
+        self.my_thread = MyThread(self)
+        self.my_thread.thread_callback_signal.connect(self.callback_action)
 
         # TODO figure out menubar
         # ###'''
@@ -120,10 +116,17 @@ class Window(QtGui.QMainWindow):
         self.save_spec_data_btn = QtGui.QPushButton('Data')
         self.save_spec_plot_btn = QtGui.QPushButton('Plot')
 
+        # thread experiment
+        self.thread_button = QtGui.QPushButton('Thread!')
+        self.thread_button.setCheckable(True)
+
         # connect custom toolbar signals
         self.take_one_spec_btn.clicked.connect(lambda: start_timer(1))
         self.take_n_spec_btn.clicked.connect(lambda: start_timer(0))
         self.fit_one_spec_btn.clicked.connect(fit_spectrum)
+
+        # thread experiment
+        self.thread_button.clicked.connect(self.start_stop)
 
         # add custom toolbar widgets to toolbar layout
         self.tb_layout.addWidget(self.take_spec_label)
@@ -140,6 +143,9 @@ class Window(QtGui.QMainWindow):
         self.tb_layout.addWidget(self.save_spec_data_btn)
         self.tb_layout.addWidget(self.save_spec_plot_btn)
 
+        # thread experiment
+        self.tb_layout.addWidget(self.thread_button)
+
         # add custom toolbar to main window
         self.mw_layout.addWidget(self.tb)
 
@@ -148,7 +154,7 @@ class Window(QtGui.QMainWindow):
         '''
 
         # make the plot window for the left side of bottom layout
-        self.pw = pg.PlotWidget(name='Plot1')
+        self.pw = pg.PlotWidget(viewBox=vb, name='Plot1')
 
         # ###EXPERIMENT WITH STYLE###
         self.pw.setTitle('Spectrum', size='12pt')
@@ -168,9 +174,9 @@ class Window(QtGui.QMainWindow):
 
         # stylize plot items
         self.fit_data.setPen(color='r', width=2)
-        self.r1_data.setPen(color='g', style=QtCore.Qt.DashLine)
-        self.r2_data.setPen(color='b', style=QtCore.Qt.DashLine)
-        self.bg_data.setPen(color='c', style=QtCore.Qt.DashLine)
+        self.r1_data.setPen(color='g')
+        self.r2_data.setPen(color='g')
+        self.bg_data.setPen(color='c')
 
         line_dict = {'angle': 90, 'fill': 'k'}
         self.vline_press = pg.InfiniteLine(pos=694.260, angle=90.0, movable=False,
@@ -282,58 +288,88 @@ class Window(QtGui.QMainWindow):
 
         # ### make and add individual widgets to plot control
 
-        # create show curves label and checkboxes
-        self.show_fits_label = QtGui.QLabel('Select fitted data to show')
-        self.show_curve_cbox = QtGui.QCheckBox('Curve')
+        # custom checked styles for checkbuttons
+        showcurve_style = 'QPushButton::checked {border:4px solid red}'
+        showr1r2_style = 'QPushButton::checked {border:4px solid green}'
+        showbg_style = 'QPushButton::checked {border:4px solid cyan}'
+        showfit_style = 'QPushButton::checked {border:4px solid green}'
+        showref_style = 'QPushButton::checked {border:4px solid magenta}'
+        showtarget_style = 'QPushButton::checked {border:4px solid yellow}'
 
-        self.show_r1r2_cbox = QtGui.QCheckBox('R1, R2')
-        self.show_bg_cbox = QtGui.QCheckBox('Background')
-        #  create show reference lines labels, cboxes, data displays, data inputs
-        self.show_refs_label = QtGui.QLabel('Select markers to show')
+        # create and style all show checkbuttons
+        self.show_fits_label = QtGui.QLabel('Show fitted data')
+        self.show_curve_cbtn = QtGui.QPushButton('Curve')
+        self.show_curve_cbtn.setCheckable(True)
+        self.show_curve_cbtn.setStyleSheet(showcurve_style)
+        self.show_r1r2_cbtn = QtGui.QPushButton('R1, R2')
+        self.show_r1r2_cbtn.setCheckable(True)
+        self.show_r1r2_cbtn.setStyleSheet(showr1r2_style)
+        self.show_bg_cbtn = QtGui.QPushButton('Background')
+        self.show_bg_cbtn.setCheckable(True)
+        self.show_bg_cbtn.setStyleSheet(showbg_style)
+        self.show_fit_p_cbtn = QtGui.QPushButton('P(fit)')
+        self.show_fit_p_cbtn.setCheckable(True)
+        self.show_fit_p_cbtn.setStyleSheet(showfit_style)
+        self.show_ref_p_cbtn = QtGui.QPushButton('P(ref)')
+        self.show_ref_p_cbtn.setCheckable(True)
+        self.show_ref_p_cbtn.setStyleSheet(showref_style)
+        self.show_target_p_cbtn = QtGui.QPushButton('P(target)')
+        self.show_target_p_cbtn.setCheckable(True)
+        self.show_target_p_cbtn.setStyleSheet(showtarget_style)
+
+        # create labels, headings, displays, and inputs for marker locations
+        self.show_refs_label = QtGui.QLabel('Show pressure markers')
         self.markers_lambda_heading = QtGui.QLabel(u'\u03BB' + ' (nm)')
         self.markers_pressure_heading = QtGui.QLabel('P (GPa)')
         self.markers_delta_p_heading = QtGui.QLabel(u'\u0394' + 'P (GPa)')
-        self.show_fit_p_cbox = QtGui.QCheckBox('P(fit)')
-        self.show_reference_p_cbox = QtGui.QCheckBox('P(ref)')
         self.show_ref_p_lambda = QtGui.QLabel('694.260')
         self.show_ref_p_pressure = QtGui.QLabel('0.00')
         self.show_ref_p_delta = QtGui.QLabel('0.00')
-        self.show_target_p_cbox = QtGui.QCheckBox('P(target)')
         self.show_target_p_lambda = QtGui.QLineEdit('694.260')
         self.show_target_p_pressure = QtGui.QLineEdit('0.00')
         self.show_target_p_delta = QtGui.QLineEdit('0.00')
-        # create reference buttons
-        self.set_ref_p_label = QtGui.QLabel('Select data to define P(ref)')
-        self.set_ref_fit_btn = QtGui.QPushButton('Fit')
-        self.set_ref_target_btn = QtGui.QPushButton('Target')
-        # create zoom buttons
-        self.zoom_full_btn = QtGui.QPushButton('Full spectrum')
-        self.zoom_roi_btn = QtGui.QPushButton('Zoom ROI')
-        self.autoscale_cbox = QtGui.QCheckBox('Autoscale')
+        # create buttons to define reference
+        self.set_ref_p_label = QtGui.QLabel('Set P(ref) position')
+        self.set_ref_from_zero_btn = QtGui.QPushButton('from Zero')
+        self.set_ref_from_fit_btn = QtGui.QPushButton('from Fit')
+        self.set_ref_from_target_btn = QtGui.QPushButton('from Target')
+        # create buttons for y-scale control
+        self.set_y_scaling_label = QtGui.QLabel('Intensity scaling')
+        self.auto_y_btn = QtGui.QPushButton('Auto')
+        self.grow_y_btn = QtGui.QPushButton('Grow')
+        self.fix_y_btn = QtGui.QPushButton('Fix')
+        self.auto_y_btn.setCheckable(True)
+        self.grow_y_btn.setCheckable(True)
+        self.fix_y_btn.setCheckable(True)
+        self.auto_y_btn.setChecked(True)
+        self.scale_y_btn_grp = QtGui.QButtonGroup()
+        self.scale_y_btn_grp.addButton(self.auto_y_btn, 0)
+        self.scale_y_btn_grp.addButton(self.grow_y_btn, 1)
+        self.scale_y_btn_grp.addButton(self.fix_y_btn, 2)
+
+
 
         # connect plot control signals
-        self.show_curve_cbox.stateChanged.connect(self.show_curve_cbox_changed)
-        self.show_r1r2_cbox.stateChanged.connect(self.show_r1r2_cbox_changed)
-        self.show_bg_cbox.stateChanged.connect(self.show_bg_cbox_changed)
-        self.show_fit_p_cbox.stateChanged.connect(self.show_fit_p_cbox_changed)
-        self.show_reference_p_cbox.stateChanged.connect(self.show_reference_p_cbox_changed)
-        self.show_target_p_cbox.stateChanged.connect(self.show_target_p_cbox_changed)
+        self.show_curve_cbtn.clicked.connect(self.show_curve_cbtn_clicked)
+        self.show_r1r2_cbtn.clicked.connect(self.show_r1r2_cbtn_clicked)
+        self.show_bg_cbtn.clicked.connect(self.show_bg_cbtn_clicked)
+        self.show_fit_p_cbtn.clicked.connect(self.show_fit_p_cbtn_clicked)
+        self.show_ref_p_cbtn.clicked.connect(self.show_ref_p_cbtn_clicked)
+        self.show_target_p_cbtn.clicked.connect(self.show_target_p_cbtn_clicked)
         self.show_target_p_lambda.editingFinished.connect(self.show_target_p_lambda_changed)
         self.show_target_p_pressure.editingFinished.connect(self.show_target_p_pressure_changed)
         self.show_target_p_delta.editingFinished.connect(self.show_target_p_delta_changed)
-        self.set_ref_fit_btn.clicked.connect(self.set_ref_from_fit)
-        self.set_ref_target_btn.clicked.connect(self.set_ref_from_target)
-        self.zoom_full_btn.clicked.connect(self.zoom_full)
-        self.zoom_roi_btn.clicked.connect(self.zoom_roi)
+        self.set_ref_from_zero_btn.clicked.connect(self.set_ref_from_zero)
+        self.set_ref_from_fit_btn.clicked.connect(self.set_ref_from_fit)
+        self.set_ref_from_target_btn.clicked.connect(self.set_ref_from_target)
 
         # add widgets to layout
         self.plot_control_layout.addWidget(self.show_fits_label)
 
         self.reference_curves_layout = QtGui.QHBoxLayout()
-        self.reference_curves_layout.addWidget(self.show_curve_cbox)
-        # self.reference_curves_layout.addWidget(self.show_fit_p_cbox)
-        self.reference_curves_layout.addWidget(self.show_r1r2_cbox)
-        self.reference_curves_layout.addWidget(self.show_bg_cbox)
+        self.reference_curves_layout.addWidget(self.show_curve_cbtn)
+        self.reference_curves_layout.addWidget(self.show_r1r2_cbtn)
+        self.reference_curves_layout.addWidget(self.show_bg_cbtn)
         self.plot_control_layout.addLayout(self.reference_curves_layout)
 
         self.plot_control_layout.addSpacing(10)
@@ -341,16 +377,15 @@ class Window(QtGui.QMainWindow):
         self.plot_control_layout.addWidget(self.show_refs_label)
 
         self.reference_lines_layout = QtGui.QGridLayout()
-        # self.reference_lines_layout.addWidget(self.show_fitted_p_cbox, 0, 0)
+        self.reference_lines_layout.addWidget(self.show_fit_p_cbtn, 1, 0)
         self.reference_lines_layout.addWidget(self.markers_lambda_heading, 1, 1)
         self.reference_lines_layout.addWidget(self.markers_pressure_heading, 1, 2)
         self.reference_lines_layout.addWidget(self.markers_delta_p_heading, 1, 3)
-        self.reference_lines_layout.addWidget(self.show_fit_p_cbox, 1, 0)
-        self.reference_lines_layout.addWidget(self.show_reference_p_cbox, 2, 0)
+        self.reference_lines_layout.addWidget(self.show_ref_p_cbtn, 2, 0)
         self.reference_lines_layout.addWidget(self.show_ref_p_lambda, 2, 1)
         self.reference_lines_layout.addWidget(self.show_ref_p_pressure, 2, 2)
         self.reference_lines_layout.addWidget(self.show_ref_p_delta, 2, 3)
-        self.reference_lines_layout.addWidget(self.show_target_p_cbox, 3, 0)
+        self.reference_lines_layout.addWidget(self.show_target_p_cbtn, 3, 0)
         self.reference_lines_layout.addWidget(self.show_target_p_lambda, 3, 1)
         self.reference_lines_layout.addWidget(self.show_target_p_pressure, 3, 2)
         self.reference_lines_layout.addWidget(self.show_target_p_delta, 3, 3)
@@ -361,16 +396,19 @@ class Window(QtGui.QMainWindow):
         self.plot_control_layout.addWidget(self.set_ref_p_label)
 
         self.set_reference_layout = QtGui.QHBoxLayout()
-        self.set_reference_layout.addWidget(self.set_ref_fit_btn)
-        self.set_reference_layout.addWidget(self.set_ref_target_btn)
+        self.set_reference_layout.addWidget(self.set_ref_from_zero_btn)
+        self.set_reference_layout.addWidget(self.set_ref_from_fit_btn)
+        self.set_reference_layout.addWidget(self.set_ref_from_target_btn)
         self.plot_control_layout.addLayout(self.set_reference_layout)
 
         self.plot_control_layout.addSpacing(10)
 
+        self.plot_control_layout.addWidget(self.set_y_scaling_label)
+
         self.zoom_buttons_layout = QtGui.QHBoxLayout()
-        self.zoom_buttons_layout.addWidget(self.zoom_full_btn)
-        self.zoom_buttons_layout.addWidget(self.zoom_roi_btn)
-        self.zoom_buttons_layout.addWidget(self.autoscale_cbox)
+        self.zoom_buttons_layout.addWidget(self.auto_y_btn)
+        self.zoom_buttons_layout.addWidget(self.grow_y_btn)
+        self.zoom_buttons_layout.addWidget(self.fix_y_btn)
         self.plot_control_layout.addLayout(self.zoom_buttons_layout)
 
         '''
@@ -528,6 +566,13 @@ class Window(QtGui.QMainWindow):
     Class methods
     '''
 
+    # thread experiment
+    def start_stop(self):
+        if self.thread_button.isChecked():
+            self.my_thread.start()
+        else:
+            self.my_thread.stop()
+
 
 
 
@@ -554,40 +599,40 @@ class Window(QtGui.QMainWindow):
                     break
 
     # class methods for plot control
-    def show_curve_cbox_changed(self):
-        if self.show_curve_cbox.isChecked():
+    def show_curve_cbtn_clicked(self):
+        if self.show_curve_cbtn.isChecked():
             self.pw.addItem(self.fit_data)
         else:
             self.pw.removeItem(self.fit_data)
 
-    def show_fit_p_cbox_changed(self):
-        if self.show_fit_p_cbox.isChecked():
-            self.pw.addItem(self.vline_press)
-        else:
-            self.pw.removeItem(self.vline_press)
-
-    def show_r1r2_cbox_changed(self):
-        if self.show_r1r2_cbox.isChecked():
+    def show_r1r2_cbtn_clicked(self):
+        if self.show_r1r2_cbtn.isChecked():
             self.pw.addItem(self.r1_data)
             self.pw.addItem(self.r2_data)
         else:
             self.pw.removeItem(self.r1_data)
             self.pw.removeItem(self.r2_data)
 
-    def show_bg_cbox_changed(self):
-        if self.show_bg_cbox.isChecked():
+    def show_bg_cbtn_clicked(self):
+        if self.show_bg_cbtn.isChecked():
             self.pw.addItem(self.bg_data)
         else:
             self.pw.removeItem(self.bg_data)
 
-    def show_reference_p_cbox_changed(self):
-        if self.show_reference_p_cbox.isChecked():
+    def show_fit_p_cbtn_clicked(self):
+        if self.show_fit_p_cbtn.isChecked():
+            self.pw.addItem(self.vline_press)
+        else:
+            self.pw.removeItem(self.vline_press)
+
+    def show_ref_p_cbtn_clicked(self):
+        if self.show_ref_p_cbtn.isChecked():
             self.pw.addItem(self.vline_ref)
         else:
             self.pw.removeItem(self.vline_ref)
 
-    def show_target_p_cbox_changed(self):
-        if self.show_target_p_cbox.isChecked():
+    def show_target_p_cbtn_clicked(self):
+        if self.show_target_p_cbtn.isChecked():
             self.pw.addItem(self.vline_target)
         else:
             self.pw.removeItem(self.vline_target)
@@ -610,6 +655,12 @@ class Window(QtGui.QMainWindow):
         target_p = fit_p + delta_p
         self.show_target_p_pressure.setText('%.2f' % target_p)
         self.show_target_p_pressure_changed()
+
+    def set_ref_from_zero(self):
+        self.show_ref_p_lambda.setText(self.lambda_naught_t_display.text())
+        self.show_ref_p_pressure.setText('0.00')
+        self.vline_ref.setX(float(self.lambda_naught_t_display.text()))
+        self.calculate_deltas()
 
     def set_ref_from_fit(self):
         self.show_ref_p_lambda.setText(self.lambda_r1_display.text())
@@ -646,12 +697,6 @@ class Window(QtGui.QMainWindow):
         target_p = float(self.show_target_p_pressure.text())
         self.show_ref_p_delta.setText('%.2f' % (ref_p - fit_p))
         self.show_target_p_delta.setText('%.2f' % (target_p - fit_p))
-
-    def zoom_full(self):
-        self.pw.setXRange(core.xs[0], core.xs[-1])
-
-    def zoom_roi(self):
-        self.pw.setXRange(core.xs_roi[0], core.xs_roi[-1])
 
     # class methods for pressure control
     def calculate_lambda_0_t(self):
@@ -712,6 +757,10 @@ class Window(QtGui.QMainWindow):
         self.calculate_target_pressure(float(self.show_target_p_lambda.text()))
         self.calculate_deltas()
 
+    # thread experiment
+    def callback_action(self, message):
+        print message
+
 
 class CoreData:
     def __init__(self):
@@ -727,13 +776,11 @@ class CoreData:
         # initial real and dummy spectra
         self.xs = self.spec.wavelengths()
         self.ys = self.spec.intensities()
-        print np.abs(self.xs-693).argmin()
-        print self.xs[436]
-        print np.abs(self.xs-743).argmin()
-        print self.xs[1478]
 
-        self.xs_roi = np.zeros(300)
-        self.ys_roi = np.zeros(300)
+        default_zoom = np.abs(self.xs-694.260).argmin()
+
+        self.xs_roi = self.xs[default_zoom - 150:default_zoom + 150]
+        self.ys_roi = self.ys[default_zoom - 150:default_zoom + 150]
 
         self.timer = QtCore.QTimer()
 
@@ -747,6 +794,51 @@ class CoreData:
         self.lambda_r1 = 694.260
         self.temperature = 295
         self.pressure = 0.00
+
+
+class CustomViewBox(pg.ViewBox):
+    def __init__(self, *args, **kwds):
+        pg.ViewBox.__init__(self, *args, **kwds)
+        self.setMouseMode(self.RectMode)
+
+    ## reimplement right-click to zoom out
+    def mouseClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.RightButton:
+            self.zoom_roi()
+
+    def mouseDoubleClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.RightButton:
+            self.autoRange()
+
+    def mouseDragEvent(self, ev):
+        if ev.button() == QtCore.Qt.RightButton:
+            ev.ignore()
+        else:
+            pg.ViewBox.mouseDragEvent(self, ev)
+
+    def zoom_roi(self):
+        self.setXRange(core.xs_roi[0], core.xs_roi[-1])
+        self.setYRange(core.ys_roi.min(), core.ys_roi.max())
+
+
+class MyThread(QtCore.QThread):
+    thread_callback_signal = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent):
+        super(MyThread, self).__init__(parent)
+        self.go = False
+
+    def run(self):
+        self.go = True
+        while self.go:
+            print 'thread running'
+            message = 'message from thread'
+            self.thread_callback_signal.emit(message)
+            update()
+            #time.sleep(2)
+
+    def stop(self):
+        self.go = False
 
 
 def start_timer(count):
@@ -764,15 +856,29 @@ def start_timer(count):
 
 def update():
     # get and plot spectra
-    start = time.clock()
     core.ys = core.spec.intensities()
     if gui.average_spec_cbox.isChecked():
         num = gui.average_spec_sbox.value()
         for each in range(num - 1):
             core.ys += core.spec.intensities()
         core.ys = core.ys/num
+    # Set up y scaling options
+    y_scaling = gui.scale_y_btn_grp.checkedId()
+    if y_scaling == 0:
+        vb.enableAutoRange(axis=vb.YAxis)
+    elif y_scaling == 2:
+        vb.disableAutoRange()
+    else:
+        viewable = vb.viewRange()
+        left_index = np.abs(core.xs-viewable[0][0]).argmin()
+        right_index = np.abs(core.xs-viewable[0][1]).argmin()
+        view_min = core.ys[left_index:right_index].min()
+        view_max = core.ys[left_index:right_index].max()
+        if view_max > viewable[1][1]:
+            print 'rescale'
+            vb.setRange(yRange=(view_min, view_max))
+    # y scaling done, ready to assign new data to curve
     gui.raw_data.setData(core.xs, core.ys)
-
     if gui.fit_n_spec_btn.isChecked():
         fit_spectrum()
 
@@ -780,18 +886,12 @@ def update():
 def fit_spectrum():
     # start by defining ROI arrays and get max_index for ROI
     full_max_index = np.argmax(core.ys)
+    if not 400 < full_max_index < 2000:
+        print 'Maximum intensity out of range'
+        return
     core.xs_roi = core.xs[full_max_index - 150:full_max_index + 150]
     core.ys_roi = core.ys[full_max_index - 150:full_max_index + 150]
-    try:
-        roi_max_index = np.argmax(core.ys_roi)
-    except ValueError:
-        print 'value error'
-        print core.ys.shape
-        print full_max_index
-        print core.ys_roi
-        return
-
-
+    roi_max_index = np.argmax(core.ys_roi)
 
     # start with approximate linear background (using full spectrum)
     slope = (core.ys[-1] - core.ys[0]) / (core.xs[-1] - core.xs[0])
@@ -814,13 +914,11 @@ def fit_spectrum():
     else:
         gui.fit_warning_display.setText('')
 
-
-
     # define fitting parameters p0 (area approximated by height)
     p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
     # fit
     try:
-        popt, pcov = curve_fit(double_pseudo, core.xs, core.ys, p0=p0)
+        popt, pcov = curve_fit(double_pseudo, core.xs_roi, core.ys_roi, p0=p0)
     except RuntimeError:
         gui.fit_warning_display.setText('Poor fit')
         return
@@ -861,6 +959,7 @@ def pseudo(x, a, c, eta, w, m, bg):
 
 
 app = QtGui.QApplication(sys.argv)
+vb = CustomViewBox()
 core = CoreData()
 gui = Window()
 pg.setConfigOptions(antialias=True)
