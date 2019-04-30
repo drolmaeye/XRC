@@ -49,43 +49,6 @@ class Window(QtGui.QMainWindow):
         self.options_menu.addAction(self.options_window_action)
 
         '''
-        Options Tab
-        '''
-
-        self.options_window = QtGui.QTabWidget()
-
-        # make p calibration tab and widgets
-        self.p_calibration_tab = QtGui.QWidget()
-        self.p_calibration_tab_layout = QtGui.QVBoxLayout()
-        self.p_calibration_tab.setLayout(self.p_calibration_tab_layout)
-
-        # lambda naught options
-        self.set_lambda_naught_gb = QtGui.QGroupBox()
-        self.p_calibration_tab_layout.addWidget(self.set_lambda_naught_gb)
-        self.set_lambda_naught_gb.setTitle(u'\u03BB' + '<sub>0</sub>' + '(295)')
-        self.set_lambda_naught_label = QtGui.QLabel('Define' + u'\u03BB' + '<sub>0</sub>(295) from:')
-        self.lambda_from_fit_btn = QtGui.QPushButton('Fit')
-        self.lambda_from_target_btn = QtGui.QPushButton('Target')
-
-        # connect signals
-        self.lambda_from_fit_btn.clicked.connect(lambda: self.set_lambda_naught('fit'))
-        self.lambda_from_target_btn.clicked.connect(lambda: self.set_lambda_naught('target'))
-
-        # add widgets to layout
-        self.set_lambda_naught_vb = QtGui.QVBoxLayout()
-        self.set_lambda_naught_gb.setLayout(self.set_lambda_naught_vb)
-        self.set_lambda_naught_vb.addWidget(self.set_lambda_naught_label)
-
-        self.set_lambda_btns_layout = QtGui.QHBoxLayout()
-        self.set_lambda_btns_layout.addWidget(self.lambda_from_fit_btn)
-        self.set_lambda_btns_layout.addWidget(self.lambda_from_target_btn)
-        self.set_lambda_naught_vb.addLayout(self.set_lambda_btns_layout)
-
-        self.options_window.addTab(self.p_calibration_tab, 'P Calibration')
-
-        # self.options_window.show()
-
-        '''
         Custom Toolbar
         '''
 
@@ -101,34 +64,53 @@ class Window(QtGui.QMainWindow):
         self.take_n_spec_btn = QtGui.QPushButton('n')
         self.take_n_spec_btn.setCheckable(True)
 
+        self.remaining_time_display = QtGui.QLabel('Idle')
+        self.remaining_time_display.setFrameShape(QtGui.QFrame.Panel)
+        self.remaining_time_display.setFrameShadow(QtGui.QFrame.Sunken)
+        self.remaining_time_display.setMinimumWidth(80)
+        self.remaining_time_display.setAlignment(QtCore.Qt.AlignCenter)
+
         self.fit_spec_label = QtGui.QLabel('Fit')
         self.fit_one_spec_btn = QtGui.QPushButton('1')
         self.fit_n_spec_btn = QtGui.QPushButton('n')
         self.fit_n_spec_btn.setCheckable(True)
 
+        self.fit_warning_display = QtGui.QLabel('')
+        self.fit_warning_display.setFrameShape(QtGui.QFrame.Panel)
+        self.fit_warning_display.setFrameShadow(QtGui.QFrame.Sunken)
+        self.fit_warning_display.setMinimumWidth(80)
+        self.fit_warning_display.setAlignment(QtCore.Qt.AlignCenter)
+
         self.save_spec_label = QtGui.QLabel('Save')
         self.save_spec_data_btn = QtGui.QPushButton('Data')
         self.save_spec_plot_btn = QtGui.QPushButton('Plot')
+
+
 
         # connect custom toolbar signals
         self.take_one_spec_btn.clicked.connect(lambda: self.start_stop(1))
         self.take_n_spec_btn.clicked.connect(lambda: self.start_stop(0))
         self.fit_one_spec_btn.clicked.connect(fit_spectrum)
+        self.fit_n_spec_btn.clicked.connect(self.fit_n_spectra)
 
         # add custom toolbar widgets to toolbar layout
         self.tb_layout.addWidget(self.take_spec_label)
         self.tb_layout.addWidget(self.take_one_spec_btn)
         self.tb_layout.addWidget(self.take_n_spec_btn)
+        self.tb_layout.addWidget(self.remaining_time_display)
         self.tb_layout.addSpacing(20)
 
         self.tb_layout.addWidget(self.fit_spec_label)
         self.tb_layout.addWidget(self.fit_one_spec_btn)
         self.tb_layout.addWidget(self.fit_n_spec_btn)
+        self.tb_layout.addWidget(self.fit_warning_display)
         self.tb_layout.addSpacing(20)
 
         self.tb_layout.addWidget(self.save_spec_label)
         self.tb_layout.addWidget(self.save_spec_data_btn)
         self.tb_layout.addWidget(self.save_spec_plot_btn)
+
+
 
         # add custom toolbar to main window
         self.mw_layout.addWidget(self.tb)
@@ -439,7 +421,7 @@ class Window(QtGui.QMainWindow):
         self.pressure_fit_display = QtGui.QLabel('0.00')
         self.pressure_fit_display.setMinimumWidth(100)
         self.pressure_fit_display.setStyleSheet('QLabel {font: bold 36px}')
-        self.fit_warning_display = QtGui.QLabel('')
+
 
         # connect pressure control signals
         self.temperature_input.valueChanged.connect(self.calculate_lambda_0_t)
@@ -460,7 +442,7 @@ class Window(QtGui.QMainWindow):
         self.press_control_layout.addWidget(self.temperature_track_cbox, 5, 2)
         self.press_control_layout.addWidget(self.pressure_fit_label, 6, 0)
         self.press_control_layout.addWidget(self.pressure_fit_display, 6, 1)
-        self.press_control_layout.addWidget(self.fit_warning_display, 6, 2)
+        # self.press_control_layout.addWidget(self.fit_warning_display, 6, 2)
 
         '''
         Options window
@@ -531,6 +513,32 @@ class Window(QtGui.QMainWindow):
 
         self.ow.addTab(self.p_calibration_tab, 'P Calibration')
 
+        # ###DURATION TAB###
+        # Main widget and layout
+        self.focus_time_tab = QtGui.QWidget()
+        self.focus_time_tab_layout = QtGui.QVBoxLayout()
+        self.focus_time_tab.setLayout(self.focus_time_tab_layout)
+
+        # make duration tab widgets
+        self.duration_time_label = QtGui.QLabel('Set focusing duration (in minutes')
+        self.duration_time_sbox = QtGui.QSpinBox()
+        self.duration_time_sbox.setRange(1, 10)
+        self.duration_time_sbox.setValue(5)
+
+        # connect signals
+        self.duration_time_sbox.valueChanged.connect(lambda value: self.set_duration(value))
+
+        # place widgets
+        self.focus_time_tab_layout.addWidget(self.duration_time_label)
+        self.focus_time_tab_layout.addWidget(self.duration_time_sbox)
+
+        # add tab to tab widget
+        self.ow.addTab(self.focus_time_tab, 'Focusing')
+
+
+
+
+
 
         # from Clemens' Dioptas
         # file = open(os.path.join("stylesheet.qss"))
@@ -551,7 +559,6 @@ class Window(QtGui.QMainWindow):
     # menubar methods
     def show_options(self):
         self.ow.show()
-        print 'show goddamn window'
 
     # class methods for custom tool bar
     def start_stop(self, count):
@@ -563,6 +570,16 @@ class Window(QtGui.QMainWindow):
                 self.my_thread.start()
             else:
                 self.my_thread.stop()
+
+    def fit_n_spectra(self):
+        if self.fit_n_spec_btn.isChecked() and not self.show_curve_cbtn.isChecked():
+            print 'turn on'
+            self.show_curve_cbtn.setChecked(True)
+        if not self.fit_n_spec_btn.isChecked() and self.show_curve_cbtn.isChecked():
+            print 'turn off'
+            self.show_curve_cbtn.setChecked(False)
+        self.show_curve_cbtn_clicked()
+
 
     # class methods for spectrum control
     def update_count_time(self):
@@ -589,7 +606,7 @@ class Window(QtGui.QMainWindow):
     # class methods for plot control
     def show_curve_cbtn_clicked(self):
         if self.show_curve_cbtn.isChecked():
-            self.pw.addItem(self.fit_data)
+            self.pw.addItem(self.fit_data, ignoreBounds=True)
         else:
             self.pw.removeItem(self.fit_data)
 
@@ -750,6 +767,10 @@ class Window(QtGui.QMainWindow):
         self.calculate_target_pressure(float(self.show_target_p_lambda.text()))
         self.calculate_deltas()
 
+    # class methods for duration tab
+    def set_duration(self, value):
+        core.duration = value*60
+
 
 class CoreData:
     def __init__(self):
@@ -772,6 +793,8 @@ class CoreData:
         self.ys_roi = self.ys[default_zoom - 150:default_zoom + 150]
 
         self.timer = QtCore.QTimer()
+
+        self.duration = 300
 
         # pressure calculation parameters
         # lambda zero (ref) is 694.260 based on Ragan et al JAP 72, 5539 (1992) at 295K
@@ -820,16 +843,18 @@ class MyThread(QtCore.QThread):
     def run(self):
         self.go = True
         start_time = time.clock()
-        duration = 3
         while self.go:
+            remaining_time = core.duration - (time.clock() - start_time)
+            gui.remaining_time_display.setText('%i' % remaining_time)
             update()
-            elapsed_time = time.clock() - start_time
-            if elapsed_time > duration:
+            if not remaining_time > 0:
                 self.stop()
                 gui.take_n_spec_btn.setChecked(False)
 
+
     def stop(self):
         self.go = False
+        gui.remaining_time_display.setText('Idle')
 
 
 def update():
@@ -853,7 +878,6 @@ def update():
         view_min = core.ys[left_index:right_index].min()
         view_max = core.ys[left_index:right_index].max()
         if view_max > viewable[1][1]:
-            print 'rescale'
             vb.setRange(yRange=(view_min, view_max))
     # y scaling done, ready to assign new data to curve
     gui.raw_data.setData(core.xs, core.ys)
@@ -889,14 +913,13 @@ def fit_spectrum():
     elif core.ys_roi[roi_max_index] > 16000:
         gui.fit_warning_display.setText('Saturated')
         return
-    else:
-        gui.fit_warning_display.setText('')
 
     # define fitting parameters p0 (area approximated by height)
     p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
     # fit
     try:
         popt, pcov = curve_fit(double_pseudo, core.xs_roi, core.ys_roi, p0=p0)
+        gui.fit_warning_display.setText('')
     except RuntimeError:
         gui.fit_warning_display.setText('Poor fit')
         return
