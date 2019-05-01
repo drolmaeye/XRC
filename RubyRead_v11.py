@@ -41,7 +41,7 @@ class Window(QtGui.QMainWindow):
         # action
         self.options_window_action = QtGui.QAction('Options', self)
         self.options_window_action.setShortcut('Ctrl+O')
-        self.options_window_action.triggered.connect(self.show_options)
+        self.options_window_action.triggered.connect(lambda: self.ow.show())
 
         self.main_menu = self.menuBar()
         self.file_menu = self.main_menu.addMenu('File')
@@ -81,6 +81,14 @@ class Window(QtGui.QMainWindow):
         self.fit_warning_display.setMinimumWidth(80)
         self.fit_warning_display.setAlignment(QtCore.Qt.AlignCenter)
 
+        self.threshold_label = QtGui.QLabel('Fit threshold')
+        self.threshold_min_input = QtGui.QSpinBox()
+        self.threshold_min_input.setRange(0, 16000)
+        self.threshold_min_input.setValue(1000)
+        self.threshold_min_input.setSingleStep(500)
+        self.threshold_min_input.setMinimumWidth(70)
+
+
         self.save_spec_label = QtGui.QLabel('Save')
         self.save_spec_data_btn = QtGui.QPushButton('Data')
         self.save_spec_plot_btn = QtGui.QPushButton('Plot')
@@ -90,7 +98,7 @@ class Window(QtGui.QMainWindow):
         # connect custom toolbar signals
         self.take_one_spec_btn.clicked.connect(lambda: self.start_stop(1))
         self.take_n_spec_btn.clicked.connect(lambda: self.start_stop(0))
-        self.fit_one_spec_btn.clicked.connect(fit_spectrum)
+        self.fit_one_spec_btn.clicked.connect(self.fit_one_spectrum)
         self.fit_n_spec_btn.clicked.connect(self.fit_n_spectra)
 
         # add custom toolbar widgets to toolbar layout
@@ -106,9 +114,13 @@ class Window(QtGui.QMainWindow):
         self.tb_layout.addWidget(self.fit_warning_display)
         self.tb_layout.addSpacing(20)
 
-        self.tb_layout.addWidget(self.save_spec_label)
-        self.tb_layout.addWidget(self.save_spec_data_btn)
-        self.tb_layout.addWidget(self.save_spec_plot_btn)
+        self.tb_layout.addWidget(self.threshold_label)
+        self.tb_layout.addWidget(self.threshold_min_input)
+        self.tb_layout.addSpacing(20)
+
+        #self.tb_layout.addWidget(self.save_spec_label)
+        #self.tb_layout.addWidget(self.save_spec_data_btn)
+        #self.tb_layout.addWidget(self.save_spec_plot_btn)
 
 
 
@@ -402,11 +414,11 @@ class Window(QtGui.QMainWindow):
         self.lambda_naught_t_display = QtGui.QLabel('694.260')
         self.lambda_r1_label = QtGui.QLabel(u'\u03BB' + '<sub>R1</sub>' + ' (nm)')
         self.lambda_r1_display = QtGui.QLabel('694.260')
-        self.threshold_label = QtGui.QLabel('Fit threshold')
-        self.threshold_min_input = QtGui.QSpinBox()
-        self.threshold_min_input.setRange(0, 16000)
-        self.threshold_min_input.setValue(200)
-        self.threshold_min_input.setSingleStep(100)
+        # ###self.threshold_label = QtGui.QLabel('Fit threshold')
+        # ###self.threshold_min_input = QtGui.QSpinBox()
+        # ###self.threshold_min_input.setRange(0, 16000)
+        # ###self.threshold_min_input.setValue(200)
+        # ###self.threshold_min_input.setSingleStep(100)
         # self.threshold_min_input.setMaximumWidth(50)
         self.temperature_label = QtGui.QLabel('T(K)')
         self.temperature_label.setStyleSheet('QLabel {font: bold 18px}')
@@ -435,8 +447,8 @@ class Window(QtGui.QMainWindow):
         self.press_control_layout.addWidget(self.lambda_naught_t_display, 2, 1)
         self.press_control_layout.addWidget(self.lambda_r1_label, 3, 0)
         self.press_control_layout.addWidget(self.lambda_r1_display, 3, 1)
-        self.press_control_layout.addWidget(self.threshold_label, 4, 0)
-        self.press_control_layout.addWidget(self.threshold_min_input, 4, 1)
+        # ###self.press_control_layout.addWidget(self.threshold_label, 4, 0)
+        # ###self.press_control_layout.addWidget(self.threshold_min_input, 4, 1)
         self.press_control_layout.addWidget(self.temperature_label, 5, 0)
         self.press_control_layout.addWidget(self.temperature_input, 5, 1)
         self.press_control_layout.addWidget(self.temperature_track_cbox, 5, 2)
@@ -517,6 +529,7 @@ class Window(QtGui.QMainWindow):
         # Main widget and layout
         self.focus_time_tab = QtGui.QWidget()
         self.focus_time_tab_layout = QtGui.QVBoxLayout()
+        self.focus_time_tab_layout.setAlignment(QtCore.Qt.AlignTop)
         self.focus_time_tab.setLayout(self.focus_time_tab_layout)
 
         # make duration tab widgets
@@ -534,6 +547,45 @@ class Window(QtGui.QMainWindow):
 
         # add tab to tab widget
         self.ow.addTab(self.focus_time_tab, 'Focusing')
+
+        # ###Fitting tab###
+        # Main widget and layout
+        self.fitting_roi_tab = QtGui.QWidget()
+        self.fitting_roi_tab_layout = QtGui.QVBoxLayout()
+        self.fitting_roi_tab_layout.setAlignment(QtCore.Qt.AlignTop)
+        self.fitting_roi_tab.setLayout(self.fitting_roi_tab_layout)
+
+        # make widgets
+        self.fitting_roi_label = QtGui.QLabel('Set roi extrema for fitting (delta pixels)')
+        self.fit_roi_min_label = QtGui.QLabel('ROI minimum')
+        self.fit_roi_min_sbox = QtGui.QSpinBox()
+        self.fit_roi_min_sbox.setRange(10, 500)
+        self.fit_roi_min_sbox.setValue(150)
+        self.fit_roi_min_sbox.setSingleStep(10)
+        self.fit_roi_max_label = QtGui.QLabel('ROI maximum')
+        self.fit_roi_max_sbox = QtGui.QSpinBox()
+        self.fit_roi_max_sbox.setRange(10, 500)
+        self.fit_roi_max_sbox.setValue(150)
+        self.fit_roi_max_sbox.setSingleStep(10)
+
+        # conect signals
+        self.fit_roi_min_sbox.valueChanged.connect(lambda value: self.set_roi_range('min', value))
+        self.fit_roi_max_sbox.valueChanged.connect(lambda value: self.set_roi_range('max', value))
+
+        # add widgets to layout
+        self.fitting_roi_tab_layout.addWidget(self.fitting_roi_label)
+
+        self.pixel_select_layout = QtGui.QHBoxLayout()
+        self.pixel_select_layout.addWidget(self.fit_roi_min_label)
+        self.pixel_select_layout.addWidget(self.fit_roi_min_sbox)
+        self.pixel_select_layout.addWidget(self.fit_roi_max_label)
+        self.pixel_select_layout.addWidget(self.fit_roi_max_sbox)
+        self.fitting_roi_tab_layout.addLayout(self.pixel_select_layout)
+
+        self.ow.addTab(self.fitting_roi_tab, 'Fitting ROI')
+
+
+
 
 
 
@@ -556,10 +608,6 @@ class Window(QtGui.QMainWindow):
     Class methods
     '''
 
-    # menubar methods
-    def show_options(self):
-        self.ow.show()
-
     # class methods for custom tool bar
     def start_stop(self, count):
         if count:
@@ -570,6 +618,10 @@ class Window(QtGui.QMainWindow):
                 self.my_thread.start()
             else:
                 self.my_thread.stop()
+
+    def fit_one_spectrum(self):
+        if not self.my_thread.go:
+            fit_spectrum()
 
     def fit_n_spectra(self):
         if self.fit_n_spec_btn.isChecked() and not self.show_curve_cbtn.isChecked():
@@ -771,13 +823,18 @@ class Window(QtGui.QMainWindow):
     def set_duration(self, value):
         core.duration = value*60
 
+    # class methods for fitting roi tab
+    def set_roi_range(self, end, value):
+        if end == 'min':
+            print 'lower'
+            core.roi_min = value
+        if end == 'max':
+            print 'upper'
+            core.roi_max = value
+
 
 class CoreData:
     def __init__(self):
-        # global variables that may or may not be used later on
-        self.stopped = True
-        self.ptrn = 0
-
         # get spectrometer going
         self.devices = sb.list_devices()
         self.spec = sb.Spectrometer(self.devices[0])
@@ -787,13 +844,16 @@ class CoreData:
         self.xs = self.spec.wavelengths()
         self.ys = self.spec.intensities()
 
+        # initial fit boundaries
+        self.roi_min = 150
+        self.roi_max = 150
+
+        # set initial roi arrays
         default_zoom = np.abs(self.xs-694.260).argmin()
+        self.xs_roi = self.xs[default_zoom - self.roi_min:default_zoom + self.roi_max]
+        self.ys_roi = self.ys[default_zoom - self.roi_min:default_zoom + self.roi_max]
 
-        self.xs_roi = self.xs[default_zoom - 150:default_zoom + 150]
-        self.ys_roi = self.ys[default_zoom - 150:default_zoom + 150]
-
-        self.timer = QtCore.QTimer()
-
+        # initial focusing time
         self.duration = 300
 
         # pressure calculation parameters
@@ -851,7 +911,6 @@ class MyThread(QtCore.QThread):
                 self.stop()
                 gui.take_n_spec_btn.setChecked(False)
 
-
     def stop(self):
         self.go = False
         gui.remaining_time_display.setText('Idle')
@@ -888,11 +947,15 @@ def update():
 def fit_spectrum():
     # start by defining ROI arrays and get max_index for ROI
     full_max_index = np.argmax(core.ys)
-    if not 400 < full_max_index < 2000:
-        print 'Maximum intensity out of range'
-        return
-    core.xs_roi = core.xs[full_max_index - 150:full_max_index + 150]
-    core.ys_roi = core.ys[full_max_index - 150:full_max_index + 150]
+    roi_min = full_max_index - core.roi_min
+    roi_max = full_max_index + core.roi_max
+    # handle edge situations (for example, during background-only spectra)
+    if roi_min < 0:
+        roi_min = 0
+    if roi_max > 2047:
+        roi_max = -1
+    core.xs_roi = core.xs[roi_min:roi_max]
+    core.ys_roi = core.ys[roi_min:roi_max]
     roi_max_index = np.argmax(core.ys_roi)
 
     # start with approximate linear background (using full spectrum)
@@ -972,12 +1035,12 @@ def recall_lambda_naught():
         print 'File format not correct, unable to update zero pressure wavelength'
 
 
-
 app = QtGui.QApplication(sys.argv)
 vb = CustomViewBox()
 core = CoreData()
 gui = Window()
 pg.setConfigOptions(antialias=True)
+# vb.zoom_roi()
 update()
 recall_lambda_naught()
 sys.exit(app.exec_())
