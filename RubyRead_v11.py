@@ -14,6 +14,7 @@ import time
 from scipy.optimize import curve_fit
 from scipy import exp, asarray
 from math import cos, sin, radians, pi, sqrt
+from epics import PV
 import os
 
 
@@ -584,6 +585,46 @@ class Window(QtGui.QMainWindow):
 
         self.ow.addTab(self.fitting_roi_tab, 'Fitting ROI')
 
+        # ###EPICS tab###
+        # make EPICS tab
+        self.epics_tab = QtGui.QWidget()
+        self.epics_tab_layout = QtGui.QVBoxLayout()
+        self.epics_tab_layout.setAlignment(QtCore.Qt.AlignTop)
+        self.epics_tab.setLayout(self.epics_tab_layout)
+
+        # make widgets
+        self.epics_label = QtGui.QLabel('Select EPICS PV for temperature tracking')
+        self.epics_drop = QtGui.QComboBox()
+        self.epics_drop.addItems(['None (disconnected)',
+                                  'Lake Shore 336 TC1 Loop 1',
+                                  'Lake Shore 336 TC1 Loop 2',
+                                  'Lake Shore 336 TC1 Loop 3',
+                                  'Lake Shore 336 TC1 Loop 4',
+                                  'Lake Shore 336 TC2 Loop 1',
+                                  'Lake Shore 336 TC2 Loop 2',
+                                  'Lake Shore 336 TC2 Loop 3',
+                                  'Lake Shore 336 TC2 Loop 4'])
+        self.epics_status_label = QtGui.QLabel('Current EPICS connection status:')
+        self.epics_status_display = QtGui.QLabel('Disconnected')
+
+        # connect signals
+        self.epics_drop.currentIndexChanged.connect(self.initialize_epics)
+
+        # add widgets to layout
+        self.epics_tab_layout.addWidget(self.epics_label)
+        self.epics_tab_layout.addWidget(self.epics_drop)
+
+        self.epics_tab_connection_layout = QtGui.QHBoxLayout()
+        self.epics_tab_connection_layout.addWidget(self.epics_status_label)
+        self.epics_tab_connection_layout.addWidget(self.epics_status_display)
+        self.epics_tab_layout.addLayout(self.epics_tab_connection_layout)
+
+        self.ow.addTab(self.epics_tab, 'EPICS')
+
+
+
+
+
 
 
 
@@ -603,6 +644,8 @@ class Window(QtGui.QMainWindow):
 
         self.show()
         # self.ow.show()
+        # dummy temperature pv
+        self.temperature_pv = []
 
     '''
     Class methods
@@ -625,10 +668,8 @@ class Window(QtGui.QMainWindow):
 
     def fit_n_spectra(self):
         if self.fit_n_spec_btn.isChecked() and not self.show_curve_cbtn.isChecked():
-            print 'turn on'
             self.show_curve_cbtn.setChecked(True)
         if not self.fit_n_spec_btn.isChecked() and self.show_curve_cbtn.isChecked():
-            print 'turn off'
             self.show_curve_cbtn.setChecked(False)
         self.show_curve_cbtn_clicked()
 
@@ -826,11 +867,53 @@ class Window(QtGui.QMainWindow):
     # class methods for fitting roi tab
     def set_roi_range(self, end, value):
         if end == 'min':
-            print 'lower'
             core.roi_min = value
         if end == 'max':
-            print 'upper'
             core.roi_max = value
+
+    # class methods for EPICS tab
+    def initialize_epics(self):
+        pv_list = ['None (disconnected)',
+                   '16LakeShore1:LS336:TC1:IN1',
+                   '16LakeShore1:LS336:TC1:IN2',
+                   '16LakeShore1:LS336:TC1:IN3',
+                   '16LakeShore1:LS336:TC1:IN4',
+                   '16LakeShore1:LS336:TC2:IN1',
+                   '16LakeShore1:LS336:TC2:IN2',
+                   '16LakeShore1:LS336:TC2:IN3',
+                   '16LakeShore1:LS336:TC2:IN4']
+        if self.epics_drop.currentIndex() == 0:
+            self.temperature_pv.disconnect()
+            self.temperature_track_cbox.setChecked(False)
+            self.temperature_track_cbox.setEnabled(False)
+            self.epics_status_display.setText('Disconnected')
+            return
+        if not type(self.temperature_pv) == list:
+            self.temperature_pv.disconnect()
+        temperature_pv = pv_list[self.epics_drop.currentIndex()]
+        self.temperature_pv = PV(temperature_pv, callback=self.track_temperature_pv,
+                                 auto_monitor=True, connection_callback=self.epics_disconnect,
+                                 connection_timeout=1.0)
+        if not self.temperature_pv.wait_for_connection(timeout=1.0):
+            self.epics_status_display.setText('Failed to connect')
+            self.temperature_pv.disconnect()
+            self.temperature_track_cbox.setChecked(False)
+            self.temperature_track_cbox.setEnabled(False)
+        else:
+            self.epics_status_display.setText('Connected')
+            self.temperature_track_cbox.setEnabled(True)
+
+    def track_temperature_pv(self, value, **kwargs):
+        if self.temperature_track_cbox.isChecked():
+            if 3 < value < 601:
+                self.temperature_input.setValue(value)
+
+    def epics_disconnect(self, conn, **kwargs):
+        if not conn:
+            self.epics_drop.setCurrentIndex(0)
+
+
+
 
 
 class CoreData:
