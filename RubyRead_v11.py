@@ -15,6 +15,7 @@ from scipy.optimize import curve_fit
 from scipy import exp, asarray
 from math import cos, sin, radians, pi, sqrt
 from epics import PV
+from pyqtgraph.GraphicsScene import exportDialog
 import os
 
 
@@ -101,6 +102,7 @@ class Window(QtGui.QMainWindow):
         self.take_n_spec_btn.clicked.connect(lambda: self.start_stop(0))
         self.fit_one_spec_btn.clicked.connect(self.fit_one_spectrum)
         self.fit_n_spec_btn.clicked.connect(self.fit_n_spectra)
+        self.save_spec_data_btn.clicked.connect(self.save_data)
 
         # add custom toolbar widgets to toolbar layout
         self.tb_layout.addWidget(self.take_spec_label)
@@ -120,7 +122,7 @@ class Window(QtGui.QMainWindow):
         self.tb_layout.addSpacing(20)
 
         #self.tb_layout.addWidget(self.save_spec_label)
-        #self.tb_layout.addWidget(self.save_spec_data_btn)
+        self.tb_layout.addWidget(self.save_spec_data_btn)
         #self.tb_layout.addWidget(self.save_spec_plot_btn)
 
 
@@ -325,8 +327,6 @@ class Window(QtGui.QMainWindow):
         self.scale_y_btn_grp.addButton(self.auto_y_btn, 0)
         self.scale_y_btn_grp.addButton(self.grow_y_btn, 1)
         self.scale_y_btn_grp.addButton(self.fix_y_btn, 2)
-
-
 
         # connect plot control signals
         self.show_curve_cbtn.clicked.connect(self.show_curve_cbtn_clicked)
@@ -633,6 +633,7 @@ class Window(QtGui.QMainWindow):
 
 
 
+
         # from Clemens' Dioptas
         # file = open(os.path.join("stylesheet.qss"))
         # stylesheet = file.read()
@@ -650,6 +651,17 @@ class Window(QtGui.QMainWindow):
     '''
     Class methods
     '''
+
+    def save_data(self):
+        scene = self.raw_data.scene()
+        self.dialog_window = exportDialog.ExportDialog(scene)
+        self.dialog_window.show(self.raw_data)
+        # self.image = pg.exporters.Exporter(self.pw.plotItem)
+        # self.image.export()
+
+    def closeEvent(self, *args, **kwargs):
+        app.closeAllWindows()
+        sys.exit()
 
     # class methods for custom tool bar
     def start_stop(self, count):
