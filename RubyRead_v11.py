@@ -658,6 +658,7 @@ class Window(QtGui.QMainWindow):
         self.dialog_window.show(self.raw_data)
         # self.image = pg.exporters.Exporter(self.pw.plotItem)
         # self.image.export()
+        # hello
 
     def closeEvent(self, *args, **kwargs):
         app.closeAllWindows()
