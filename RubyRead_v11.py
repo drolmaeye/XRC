@@ -40,13 +40,24 @@ class Window(QtGui.QMainWindow):
         Menu bar
         '''
 
-        # action
+        # actions
+        self.save_data_action = QtGui.QAction('Save', self)
+        self.save_data_action.setShortcut('Ctrl+S')
+        self.save_data_action.triggered.connect(self.save_data)
+
+        self.close_rubyread_action = QtGui.QAction('Exit', self)
+        self.close_rubyread_action.setShortcut('Ctrl+Q')
+        self.close_rubyread_action.triggered.connect(self.closeEvent)
+
         self.options_window_action = QtGui.QAction('Options', self)
         self.options_window_action.setShortcut('Ctrl+O')
         self.options_window_action.triggered.connect(lambda: self.ow.show())
 
+        # make menu, add headings, put actions under headings
         self.main_menu = self.menuBar()
         self.file_menu = self.main_menu.addMenu('File')
+        self.file_menu.addAction(self.save_data_action)
+        self.file_menu.addAction(self.close_rubyread_action)
         self.options_menu = self.main_menu.addMenu('Options')
         self.options_menu.addAction(self.options_window_action)
 
@@ -90,19 +101,16 @@ class Window(QtGui.QMainWindow):
         self.threshold_min_input.setSingleStep(500)
         self.threshold_min_input.setMinimumWidth(70)
 
-
-        self.save_spec_label = QtGui.QLabel('Save')
-        self.save_spec_data_btn = QtGui.QPushButton('Data')
-        self.save_spec_plot_btn = QtGui.QPushButton('Plot')
-
-
+        self.test_9000_btn = QtGui.QPushButton('Test 9000')
+        self.test_9999_btn = QtGui.QPushButton('Test 9999')
 
         # connect custom toolbar signals
         self.take_one_spec_btn.clicked.connect(lambda: self.start_stop(1))
         self.take_n_spec_btn.clicked.connect(lambda: self.start_stop(0))
         self.fit_one_spec_btn.clicked.connect(self.fit_one_spectrum)
         self.fit_n_spec_btn.clicked.connect(self.fit_n_spectra)
-        self.save_spec_data_btn.clicked.connect(self.save_data)
+        self.test_9000_btn.clicked.connect(self.test_9000)
+        self.test_9999_btn.clicked.connect(self.test_9999)
 
         # add custom toolbar widgets to toolbar layout
         self.tb_layout.addWidget(self.take_spec_label)
@@ -121,11 +129,8 @@ class Window(QtGui.QMainWindow):
         self.tb_layout.addWidget(self.threshold_min_input)
         self.tb_layout.addSpacing(20)
 
-        #self.tb_layout.addWidget(self.save_spec_label)
-        self.tb_layout.addWidget(self.save_spec_data_btn)
-        #self.tb_layout.addWidget(self.save_spec_plot_btn)
-
-
+        self.tb_layout.addWidget(self.test_9000_btn)
+        self.tb_layout.addWidget(self.test_9999_btn)
 
         # add custom toolbar to main window
         self.mw_layout.addWidget(self.tb)
@@ -135,6 +140,7 @@ class Window(QtGui.QMainWindow):
         '''
 
         # make the plot window for the left side of bottom layout
+        # custom viewbox, vb, allows for custom button event handling
         self.pw = pg.PlotWidget(viewBox=vb, name='Plot1')
 
         # ###EXPERIMENT WITH STYLE###
@@ -145,13 +151,11 @@ class Window(QtGui.QMainWindow):
         self.pw.setLabel('bottom', 'Wavelength', units='nm')
 
         # create plot items (need to be added when necessary)
-        self.raw_data = pg.PlotDataItem()
+        self.raw_data = pg.PlotDataItem(name='raw and cooked')
         self.fit_data = pg.PlotDataItem()
         self.r1_data = pg.PlotDataItem()
         self.r2_data = pg.PlotDataItem()
         self.bg_data = pg.PlotDataItem()
-        # self.ref_data = pg.PlotDataItem()
-        # self.target_data = pg.PlotDataItem()
 
         # stylize plot items
         self.fit_data.setPen(color='r', width=2)
@@ -180,6 +184,10 @@ class Window(QtGui.QMainWindow):
 
         # add plot widget to bottom layout
         self.bottom_layout.addWidget(self.pw)
+
+        '''
+        Control Window
+        '''
 
         # make the control window for the right side and add it to main window layout
         self.cw = QtGui.QWidget()
@@ -676,15 +684,38 @@ class Window(QtGui.QMainWindow):
                 self.my_thread.stop()
 
     def fit_one_spectrum(self):
-        if not self.my_thread.go:
+        if not self.fit_n_spec_btn.isChecked():
+            fit_spectrum()
+        elif not self.my_thread.go:
             fit_spectrum()
 
     def fit_n_spectra(self):
         if self.fit_n_spec_btn.isChecked() and not self.show_curve_cbtn.isChecked():
-            self.show_curve_cbtn.setChecked(True)
+            self.show_curve_cbtn.click()
         if not self.fit_n_spec_btn.isChecked() and self.show_curve_cbtn.isChecked():
-            self.show_curve_cbtn.setChecked(False)
-        self.show_curve_cbtn_clicked()
+            self.show_curve_cbtn.click()
+
+    def test_9000(self):
+        print 'test successful!'
+        print self.pw.getPlotItem().listDataItems()
+        vb.addItem(self.fit_data)
+        vb.addItem(self.r1_data)
+        vb.addItem(self.r2_data)
+        vb.addItem(self.bg_data)
+        # ###self.pw.addItem(self.vline_press)
+        # ###self.pw.addItem(self.vline_ref)
+        # ###self.pw.addItem(self.vline_target)
+
+    def test_9999(self):
+        print 'test successful!'
+        print self.pw.getPlotItem().listDataItems()
+        vb.removeItem(self.fit_data)
+        vb.removeItem(self.r1_data)
+        vb.removeItem(self.r2_data)
+        vb.removeItem(self.bg_data)
+        # ###self.pw.removeItem(self.vline_press)
+        # ###self.pw.removeItem(self.vline_ref)
+        # ###self.pw.removeItem(self.vline_target)
 
 
     # class methods for spectrum control
@@ -1068,20 +1099,28 @@ def fit_spectrum():
     threshold = gui.threshold_min_input.value()
     if r1_height < threshold:
         gui.fit_warning_display.setText('Too weak')
-        return
     elif core.ys_roi[roi_max_index] > 16000:
         gui.fit_warning_display.setText('Saturated')
+    else:
+        # define fitting parameters p0 (area approximated by height)
+        p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
+        # fit
+        try:
+            popt, pcov = curve_fit(double_pseudo, core.xs_roi, core.ys_roi, p0=p0)
+            gui.fit_warning_display.setText('')
+        except RuntimeError:
+            gui.fit_warning_display.setText('Poor fit')
+    if not gui.fit_warning_display.text() == '':
+        print 'trouble'
+        fitted_list = [gui.show_curve_cbtn, gui.show_r1r2_cbtn, gui.show_bg_cbtn]
+        for each in fitted_list:
+            if each.isChecked():
+                each.click()
         return
-
-    # define fitting parameters p0 (area approximated by height)
-    p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
-    # fit
-    try:
-        popt, pcov = curve_fit(double_pseudo, core.xs_roi, core.ys_roi, p0=p0)
-        gui.fit_warning_display.setText('')
-    except RuntimeError:
-        gui.fit_warning_display.setText('Poor fit')
-        return
+    else:
+        print 'all good'
+        if not gui.show_curve_cbtn.isChecked():
+            gui.show_curve_cbtn.click()
 
     gui.lambda_r1_display.setText('%.3f' % popt[5])
 
