@@ -665,9 +665,6 @@ class Window(QtGui.QMainWindow):
         scene = self.raw_data.scene()
         self.dialog_window = exportDialog.ExportDialog(scene)
         self.dialog_window.show(self.raw_data)
-        # self.image = pg.exporters.Exporter(self.pw.plotItem)
-        # self.image.export()
-        # hello
 
     def closeEvent(self, *args, **kwargs):
         app.closeAllWindows()
@@ -675,19 +672,11 @@ class Window(QtGui.QMainWindow):
 
     # class methods for custom tool bar
     def start_stop(self, count):
-        if count:
-            if not self.my_thread.go:
-                update()
-        else:
-            if self.take_n_spec_btn.isChecked():
-                self.my_thread.start()
-            else:
-                self.my_thread.stop()
+        if (count or self.take_n_spec_btn.isChecked()) and not self.my_thread.go:
+            self.my_thread.start()
 
     def fit_one_spectrum(self):
         if not self.fit_n_spec_btn.isChecked():
-            fit_spectrum()
-        elif not self.my_thread.go:
             fit_spectrum()
 
     def fit_n_spectra(self):
@@ -744,7 +733,7 @@ class Window(QtGui.QMainWindow):
     # class methods for plot control
     def show_curve_cbtn_clicked(self):
         if self.show_curve_cbtn.isChecked():
-            self.pw.addItem(self.fit_data, ignoreBounds=True)
+            self.pw.addItem(self.fit_data)#, ignoreBounds=True)
         else:
             self.pw.removeItem(self.fit_data)
 
@@ -958,8 +947,14 @@ class Window(QtGui.QMainWindow):
             self.epics_drop.setCurrentIndex(0)
 
     def data_set(self, data_dict):
-        gui.raw_data.setData(data_dict['raw_x'], data_dict['raw_y'])
-        print 'signal received'
+        self.fit_warning_display.setText(data_dict['warning'])
+        self.raw_data.setData(data_dict['raw_x'], data_dict['raw_y'])
+        if data_dict['warning'] == '':
+            self.fit_data.setData(data_dict['fit_x'], data_dict['fit_y'])
+            self.r1_data.setData(data_dict['fit_x'], data_dict['fit_r1'])
+            self.r2_data.setData(data_dict['fit_x'], data_dict['fit_r2'])
+            self.bg_data.setData(data_dict['fit_x'], data_dict['fit_bg'])
+
 
 
 
@@ -984,6 +979,13 @@ class CoreData:
         default_zoom = np.abs(self.xs-694.260).argmin()
         self.xs_roi = self.xs[default_zoom - self.roi_min:default_zoom + self.roi_max]
         self.ys_roi = self.ys[default_zoom - self.roi_min:default_zoom + self.roi_max]
+
+        # variables to pass through thread
+        self.warning = ' '
+        self.ys_fit = np.ones(300)
+        self.ys_r1 = np.ones(300)
+        self.ys_r2 = np.ones(300)
+        self.ys_bg = np.ones(300)
 
         # initial focusing time
         self.duration = 300
@@ -1036,12 +1038,21 @@ class MyThread(QtCore.QThread):
         self.go = True
         start_time = time.clock()
         while self.go:
-            remaining_time = core.duration - (time.clock() - start_time)
-            gui.remaining_time_display.setText('%i' % remaining_time)
+            if not gui.take_n_spec_btn.isChecked():
+                remaining_time = -1
+            else:
+                remaining_time = core.duration - (time.clock() - start_time)
+                gui.remaining_time_display.setText('%i' % remaining_time)
             update()
-            data_dict = {'raw_x': core.xs, 'raw_y': core.ys}
+            data_dict = {'warning': core.warning,
+                         'raw_x': core.xs,
+                         'raw_y': core.ys,
+                         'fit_x': core.xs_roi,
+                         'fit_y': core.ys_fit,
+                         'fit_r1': core.ys_r1,
+                         'fit_r2': core.ys_r2,
+                         'fit_bg': core.ys_bg}
             self.thread_callback_signal.emit(data_dict)
-
             if not remaining_time > 0:
                 self.stop()
                 gui.take_n_spec_btn.setChecked(False)
@@ -1106,19 +1117,20 @@ def fit_spectrum():
     # check r1_height is greater than fitting threshold and not saturated
     threshold = gui.threshold_min_input.value()
     if r1_height < threshold:
-        gui.fit_warning_display.setText('Too weak')
+        warning = 'Too weak'
     elif core.ys_roi[roi_max_index] > 16000:
-        gui.fit_warning_display.setText('Saturated')
+        warning = 'Saturated'
     else:
         # define fitting parameters p0 (area approximated by height)
         p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
         # fit
         try:
             popt, pcov = curve_fit(double_pseudo, core.xs_roi, core.ys_roi, p0=p0)
-            gui.fit_warning_display.setText('')
+            warning = ''
         except RuntimeError:
-            gui.fit_warning_display.setText('Poor fit')
-    if not gui.fit_warning_display.text() == '':
+            warning = 'Poor fit'
+    core.warning = warning
+    if not warning == '':
         print 'trouble'
         fitted_list = [gui.show_curve_cbtn, gui.show_r1r2_cbtn, gui.show_bg_cbtn]
         for each in fitted_list:
@@ -1132,11 +1144,16 @@ def fit_spectrum():
 
     gui.lambda_r1_display.setText('%.3f' % popt[5])
 
-    gui.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt))
-    gui.r1_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
-    gui.r2_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9]))
-    gui.bg_data.setData(core.xs_roi, (popt[8] * core.xs_roi + popt[9]))
-
+    core.ys_fit = double_pseudo(core.xs_roi, *popt)
+    core.ys_r1 = pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9])
+    core.ys_r2 = pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9])
+    core.ys_bg = (popt[8] * core.xs_roi + popt[9])
+    # for fitting a spectrum outside the thread
+    if not gui.my_thread.go:
+        gui.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt))
+        gui.r1_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
+        gui.r2_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9]))
+        gui.bg_data.setData(core.xs_roi, (popt[8] * core.xs_roi + popt[9]))
     # calculate pressure
     core.lambda_r1 = popt[5]
     calculate_pressure(core.lambda_r1)
