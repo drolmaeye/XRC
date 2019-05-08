@@ -109,6 +109,7 @@ class Window(QtGui.QMainWindow):
         self.take_n_spec_btn.clicked.connect(self.take_n_spectra)
         self.fit_one_spec_btn.clicked.connect(self.fit_one_spectrum)
         self.fit_n_spec_btn.clicked.connect(self.fit_n_spectra)
+        self.threshold_min_input.valueChanged.connect(self.set_threshold)
         self.test_9000_btn.clicked.connect(self.test_9000)
         self.test_9999_btn.clicked.connect(self.test_9999)
 
@@ -651,8 +652,11 @@ class Window(QtGui.QMainWindow):
         # file.close()
 
         # initialize thread object (although could be done in core or end?)
-        self.my_thread = MyThread(self)
-        self.my_thread.thread_callback_signal.connect(self.data_set)
+        self.collect_thread = CollectThread(self)
+        self.collect_thread.collect_thread_callback_signal.connect(self.data_set)
+
+        self.fit_thread = FitThread(self)
+        self.fit_thread.fit_thread_callback_signal.connect(self.fit_set)
 
         self.show()
         # self.ow.show()
@@ -674,7 +678,7 @@ class Window(QtGui.QMainWindow):
 
     # class methods for custom tool bar
     def take_one_spectrum(self):
-        if self.my_thread.go:
+        if self.collect_thread.go:
             print 'out'
             return
         intensities = core.spec.intensities()
@@ -687,20 +691,23 @@ class Window(QtGui.QMainWindow):
         update()
 
     def take_n_spectra(self):
-        if not self.my_thread.go:
-            self.my_thread.start()
+        if not self.collect_thread.go:
+            self.collect_thread.start()
         else:
-            self.my_thread.stop()
+            self.collect_thread.stop()
 
     def fit_one_spectrum(self):
         if not self.fit_n_spec_btn.isChecked():
-            fit_spectrum()
+            self.fit_thread.start()
 
     def fit_n_spectra(self):
         if self.fit_n_spec_btn.isChecked() and not self.show_curve_cbtn.isChecked():
             self.show_curve_cbtn.click()
         if not self.fit_n_spec_btn.isChecked() and self.show_curve_cbtn.isChecked():
             self.show_curve_cbtn.click()
+
+    def set_threshold(self):
+        core.threshold = self.threshold_min_input.value()
 
     def test_9000(self):
         print 'test successful!'
@@ -978,6 +985,33 @@ class Window(QtGui.QMainWindow):
             self.remaining_time_display.setText(remaining_time)
             update()
 
+    def fit_set(self, fit_dict):
+        warning = fit_dict['warning']
+        if not warning == '':
+            fitted_list = [self.show_curve_cbtn, self.show_r1r2_cbtn, self.show_bg_cbtn]
+            for each in fitted_list:
+                if each.isChecked():
+                    each.click()
+        else:
+            print 'all good'
+            if not self.show_curve_cbtn.isChecked():
+                self.show_curve_cbtn.click()
+            popt = fit_dict['popt']
+            self.lambda_r1_display.setText('%.3f' % popt[5])
+            self.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt))
+            self.r1_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
+            self.r2_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9]))
+            self.bg_data.setData(core.xs_roi, (popt[8] * core.xs_roi + popt[9]))
+            # calculate pressure
+            core.lambda_r1 = popt[5]
+            calculate_pressure(core.lambda_r1)
+            self.vline_press.setPos(popt[5])
+        self.fit_warning_display.setText(warning)
+
+
+
+
+
 
 
 
@@ -1007,6 +1041,8 @@ class CoreData:
         # variables to pass through thread
         self.average = False
         self.num_average = 1
+        self.threshold = 1000
+        self.warning = ''
 
 
         # initial focusing time
@@ -1049,11 +1085,11 @@ class CustomViewBox(pg.ViewBox):
         self.setYRange(core.ys_roi.min(), core.ys_roi.max())
 
 
-class MyThread(QtCore.QThread):
-    thread_callback_signal = QtCore.pyqtSignal(dict)
+class CollectThread(QtCore.QThread):
+    collect_thread_callback_signal = QtCore.pyqtSignal(dict)
 
     def __init__(self, parent):
-        super(MyThread, self).__init__(parent)
+        super(CollectThread, self).__init__(parent)
         self.go = False
 
     def run(self):
@@ -1074,15 +1110,61 @@ class MyThread(QtCore.QThread):
             # update dictionary values and send the dict signal
             data_dict['remaining_time'] = remaining_time
             data_dict['raw_y'] = intensities
-            self.thread_callback_signal.emit(data_dict)
+            self.collect_thread_callback_signal.emit(data_dict)
             # check if it's time to stop
             if not remaining_time > 0:
                 self.stop()
         data_dict['remaining_time'] = 0
-        self.thread_callback_signal.emit(data_dict)
+        self.collect_thread_callback_signal.emit(data_dict)
 
     def stop(self):
         self.go = False
+
+
+class FitThread(QtCore.QThread):
+    fit_thread_callback_signal = QtCore.pyqtSignal(dict)
+
+    def __init__(self, parent):
+        super(FitThread, self).__init__(parent)
+
+    def run(self):
+        fit_dict = {'warning': '', 'popt': ''}
+        # start by defining ROI arrays and get max_index for ROI
+        full_max_index = np.argmax(core.ys)
+        roi_min = full_max_index - core.roi_min
+        roi_max = full_max_index + core.roi_max
+        # handle edge situations (for example, during background-only spectra)
+        if roi_min < 0:
+            roi_min = 0
+        if roi_max > 2047:
+            roi_max = -1
+        core.xs_roi = core.xs[roi_min:roi_max]
+        core.ys_roi = core.ys[roi_min:roi_max]
+        roi_max_index = np.argmax(core.ys_roi)
+        # start with approximate linear background (using full spectrum)
+        slope = (core.ys[-1] - core.ys[0]) / (core.xs[-1] - core.xs[0])
+        intercept = core.ys[0] - slope * core.xs[0]
+        # obtain initial guesses for fitting parameters using ROI array
+        r1_pos = core.xs_roi[roi_max_index]
+        r2_pos = r1_pos - 1.4
+        r1_height = core.ys_roi[roi_max_index] - (slope * r1_pos + intercept)
+        r2_height = r1_height / 2.0
+        # check r1_height is within range before fitting
+        if r1_height < core.threshold:
+            warning = 'Too weak'
+        elif core.ys_roi[roi_max_index] > 16000:
+            warning = 'Saturated'
+        else:
+            # define fitting parameters p0 (area approximated by height)
+            p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
+            try:
+                popt, pcov = curve_fit(double_pseudo, core.xs_roi, core.ys_roi, p0=p0)
+                warning = ''
+                fit_dict['popt'] = popt
+            except RuntimeError:
+                warning = 'Poor fit'
+        fit_dict['warning'] = warning
+        self.fit_thread_callback_signal.emit(fit_dict)
 
 
 def update():
@@ -1104,77 +1186,7 @@ def update():
     # y scaling done, ready to assign new data to curve
     gui.raw_data.setData(core.xs, core.ys)
     if gui.fit_n_spec_btn.isChecked():
-        fit_spectrum()
-
-
-def fit_spectrum():
-    # start by defining ROI arrays and get max_index for ROI
-    full_max_index = np.argmax(core.ys)
-    roi_min = full_max_index - core.roi_min
-    roi_max = full_max_index + core.roi_max
-    # handle edge situations (for example, during background-only spectra)
-    if roi_min < 0:
-        roi_min = 0
-    if roi_max > 2047:
-        roi_max = -1
-    core.xs_roi = core.xs[roi_min:roi_max]
-    core.ys_roi = core.ys[roi_min:roi_max]
-    roi_max_index = np.argmax(core.ys_roi)
-
-    # start with approximate linear background (using full spectrum)
-    slope = (core.ys[-1] - core.ys[0]) / (core.xs[-1] - core.xs[0])
-    intercept = core.ys[0] - slope * core.xs[0]
-
-    # obtain initial guesses for fitting parameters using ROI array
-    r1_pos = core.xs_roi[roi_max_index]
-    r2_pos = r1_pos - 1.4
-    r1_height = core.ys_roi[roi_max_index] - (slope * r1_pos + intercept)
-    r2_height = r1_height / 2.0
-
-    # check r1_height is greater than fitting threshold and not saturated
-    threshold = gui.threshold_min_input.value()
-    if r1_height < threshold:
-        warning = 'Too weak'
-    elif core.ys_roi[roi_max_index] > 16000:
-        warning = 'Saturated'
-    else:
-        # define fitting parameters p0 (area approximated by height)
-        p0 = [r2_height, r2_pos, 0.5, 1.0, r1_height, r1_pos, 0.5, 1.0, slope, intercept]
-        # fit
-        try:
-            popt, pcov = curve_fit(double_pseudo, core.xs_roi, core.ys_roi, p0=p0)
-            warning = ''
-        except RuntimeError:
-            warning = 'Poor fit'
-    core.warning = warning
-    if not warning == '':
-        print 'trouble'
-        fitted_list = [gui.show_curve_cbtn, gui.show_r1r2_cbtn, gui.show_bg_cbtn]
-        for each in fitted_list:
-            if each.isChecked():
-                each.click()
-        return
-    else:
-        print 'all good'
-        if not gui.show_curve_cbtn.isChecked():
-            gui.show_curve_cbtn.click()
-
-    gui.lambda_r1_display.setText('%.3f' % popt[5])
-
-    core.ys_fit = double_pseudo(core.xs_roi, *popt)
-    core.ys_r1 = pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9])
-    core.ys_r2 = pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9])
-    core.ys_bg = (popt[8] * core.xs_roi + popt[9])
-    # for fitting a spectrum outside the thread
-    if not gui.my_thread.go:
-        gui.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt))
-        gui.r1_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[4], popt[5], popt[6], popt[7], popt[8], popt[9]))
-        gui.r2_data.setData(core.xs_roi, pseudo(core.xs_roi, popt[0], popt[1], popt[2], popt[3], popt[8], popt[9]))
-        gui.bg_data.setData(core.xs_roi, (popt[8] * core.xs_roi + popt[9]))
-    # calculate pressure
-    core.lambda_r1 = popt[5]
-    calculate_pressure(core.lambda_r1)
-    gui.vline_press.setPos(popt[5])
+        gui.fit_thread.start()
 
 
 def calculate_pressure(lambda_r1):
