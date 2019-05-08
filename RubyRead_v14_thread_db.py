@@ -678,17 +678,15 @@ class Window(QtGui.QMainWindow):
 
     # class methods for custom tool bar
     def take_one_spectrum(self):
-        if self.collect_thread.go:
-            print 'out'
-            return
-        intensities = core.spec.intensities()
-        if self.average_spec_cbox.isChecked():
-            num = self.average_spec_sbox.value()
-            for each in range(num - 1):
-                intensities += core.spec.intensities()
-            intensities = intensities / num
-        core.ys = intensities
-        update()
+        if not self.collect_thread.go:
+            intensities = core.spec.intensities()
+            if self.average_spec_cbox.isChecked():
+                num = self.average_spec_sbox.value()
+                for each in range(num - 1):
+                    intensities += core.spec.intensities()
+                intensities = intensities / num
+            core.ys = intensities
+            update()
 
     def take_n_spectra(self):
         if not self.collect_thread.go:
