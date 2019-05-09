@@ -98,7 +98,7 @@ class Window(QtGui.QMainWindow):
         self.threshold_min_input = QtGui.QSpinBox()
         self.threshold_min_input.setRange(0, 16000)
         self.threshold_min_input.setValue(1000)
-        self.threshold_min_input.setSingleStep(500)
+        self.threshold_min_input.setSingleStep(100)
         self.threshold_min_input.setMinimumWidth(70)
 
         self.test_9000_btn = QtGui.QPushButton('Test 9000')
@@ -213,7 +213,6 @@ class Window(QtGui.QMainWindow):
         # make and set layout to Spectrum Control QGroupBox
         self.spec_control_layout = QtGui.QVBoxLayout()
         self.spec_control_layout.setAlignment(QtCore.Qt.AlignTop)
-        # ###self.spec_control_layout.setSpacing(10)
         self.spec_control.setLayout(self.spec_control_layout)
 
         # ###make individual widgets to spec control grid layout
@@ -318,8 +317,11 @@ class Window(QtGui.QMainWindow):
         self.show_ref_p_pressure = QtGui.QLabel('0.00')
         self.show_ref_p_delta = QtGui.QLabel('0.00')
         self.show_target_p_lambda = QtGui.QLineEdit('694.260')
+        self.show_target_p_lambda.setValidator(QtGui.QDoubleValidator(669.000, 767.000, 3))
         self.show_target_p_pressure = QtGui.QLineEdit('0.00')
+        self.show_target_p_pressure.setValidator(QtGui.QDoubleValidator(-57.00, 335.00, 2))
         self.show_target_p_delta = QtGui.QLineEdit('0.00')
+        self.show_target_p_delta.setValidator(QtGui.QDoubleValidator(-57.00, 335.00, 2))
         # create buttons to define reference
         self.set_ref_p_label = QtGui.QLabel('Set P(ref) position')
         self.set_ref_from_zero_btn = QtGui.QPushButton('from Zero')
@@ -352,6 +354,9 @@ class Window(QtGui.QMainWindow):
         self.set_ref_from_zero_btn.clicked.connect(self.set_ref_from_zero)
         self.set_ref_from_fit_btn.clicked.connect(self.set_ref_from_fit)
         self.set_ref_from_target_btn.clicked.connect(self.set_ref_from_target)
+        self.auto_y_btn.clicked.connect(lambda: vb.enableAutoRange(axis=vb.YAxis))
+        self.grow_y_btn.clicked.connect(lambda: vb.disableAutoRange())
+        self.fix_y_btn.clicked.connect(lambda: vb.disableAutoRange())
 
         # add widgets to layout
         self.plot_control_layout.addWidget(self.show_fits_label)
@@ -426,12 +431,6 @@ class Window(QtGui.QMainWindow):
         self.lambda_naught_t_display = QtGui.QLabel('694.260')
         self.lambda_r1_label = QtGui.QLabel(u'\u03BB' + '<sub>R1</sub>' + ' (nm)')
         self.lambda_r1_display = QtGui.QLabel('694.260')
-        # ###self.threshold_label = QtGui.QLabel('Fit threshold')
-        # ###self.threshold_min_input = QtGui.QSpinBox()
-        # ###self.threshold_min_input.setRange(0, 16000)
-        # ###self.threshold_min_input.setValue(200)
-        # ###self.threshold_min_input.setSingleStep(100)
-        # self.threshold_min_input.setMaximumWidth(50)
         self.temperature_label = QtGui.QLabel('T(K)')
         self.temperature_label.setStyleSheet('QLabel {font: bold 18px}')
         self.temperature_input = QtGui.QSpinBox()
@@ -459,14 +458,11 @@ class Window(QtGui.QMainWindow):
         self.press_control_layout.addWidget(self.lambda_naught_t_display, 2, 1)
         self.press_control_layout.addWidget(self.lambda_r1_label, 3, 0)
         self.press_control_layout.addWidget(self.lambda_r1_display, 3, 1)
-        # ###self.press_control_layout.addWidget(self.threshold_label, 4, 0)
-        # ###self.press_control_layout.addWidget(self.threshold_min_input, 4, 1)
-        self.press_control_layout.addWidget(self.temperature_label, 5, 0)
-        self.press_control_layout.addWidget(self.temperature_input, 5, 1)
-        self.press_control_layout.addWidget(self.temperature_track_cbox, 5, 2)
-        self.press_control_layout.addWidget(self.pressure_fit_label, 6, 0)
-        self.press_control_layout.addWidget(self.pressure_fit_display, 6, 1)
-        # self.press_control_layout.addWidget(self.fit_warning_display, 6, 2)
+        self.press_control_layout.addWidget(self.temperature_label, 4, 0)
+        self.press_control_layout.addWidget(self.temperature_input, 4, 1)
+        self.press_control_layout.addWidget(self.temperature_track_cbox, 4, 2)
+        self.press_control_layout.addWidget(self.pressure_fit_label, 5, 0)
+        self.press_control_layout.addWidget(self.pressure_fit_display, 5, 1)
 
         '''
         Options window
@@ -547,10 +543,13 @@ class Window(QtGui.QMainWindow):
         self.focus_time_tab.setLayout(self.focus_time_tab_layout)
 
         # make duration tab widgets
-        self.duration_time_label = QtGui.QLabel('Set focusing duration (in minutes')
+        self.duration_time_label = QtGui.QLabel('Set focusing duration (in minutes)')
+        # self.duration_time_label.setStyleSheet('font-size: 12pt')
         self.duration_time_sbox = QtGui.QSpinBox()
         self.duration_time_sbox.setRange(1, 10)
         self.duration_time_sbox.setValue(5)
+        # self.duration_time_sbox.setStyleSheet('font-size: 12pt')
+        self.duration_time_sbox.setMaximumWidth(70)
 
         # connect signals
         self.duration_time_sbox.valueChanged.connect(lambda value: self.set_duration(value))
@@ -634,35 +633,20 @@ class Window(QtGui.QMainWindow):
 
         self.ow.addTab(self.epics_tab, 'EPICS')
 
-
-
-
-
-
-
-
-
-
-
-
-
-
         # from Clemens' Dioptas
         # file = open(os.path.join("stylesheet.qss"))
         # stylesheet = file.read()
         # self.setStyleSheet(stylesheet)
         # file.close()
 
-        # initialize thread object (although could be done in core or end?)
+        # initialize collection thread
         self.collect_thread = CollectThread(self)
         self.collect_thread.collect_thread_callback_signal.connect(self.data_set)
-
+        # initialize fit thread
         self.fit_thread = FitThread(self)
         self.fit_thread.fit_thread_callback_signal.connect(self.fit_set)
 
         self.show()
-        # self.ow.show()
-        # dummy temperature pv
         self.temperature_pv = []
 
     '''
@@ -701,35 +685,25 @@ class Window(QtGui.QMainWindow):
             self.fit_thread.start()
 
     def fit_n_spectra(self):
-        if self.fit_n_spec_btn.isChecked() and not self.show_curve_cbtn.isChecked():
-            self.show_curve_cbtn.click()
-        if not self.fit_n_spec_btn.isChecked() and self.show_curve_cbtn.isChecked():
-            self.show_curve_cbtn.click()
+        if self.fit_n_spec_btn.isChecked():
+            if not self.show_curve_cbtn.isChecked():
+                self.show_curve_cbtn.click()
+            if not self.show_fit_p_cbtn.isChecked():
+                self.show_fit_p_cbtn.click()
+        else:
+            if self.show_curve_cbtn.isChecked():
+                self.show_curve_cbtn.click()
+            if self.show_fit_p_cbtn.isChecked():
+                self.show_fit_p_cbtn.click()
 
     def set_threshold(self):
         core.threshold = self.threshold_min_input.value()
 
     def test_9000(self):
-        print 'test successful!'
-        print self.pw.getPlotItem().listDataItems()
-        vb.addItem(self.fit_data)
-        vb.addItem(self.r1_data)
-        vb.addItem(self.r2_data)
-        vb.addItem(self.bg_data)
-        # ###self.pw.addItem(self.vline_press)
-        # ###self.pw.addItem(self.vline_ref)
-        # ###self.pw.addItem(self.vline_target)
+        print 'not used for the moment'
 
     def test_9999(self):
-        print 'test successful!'
-        print self.pw.getPlotItem().listDataItems()
-        vb.removeItem(self.fit_data)
-        vb.removeItem(self.r1_data)
-        vb.removeItem(self.r2_data)
-        vb.removeItem(self.bg_data)
-        # ###self.pw.removeItem(self.vline_press)
-        # ###self.pw.removeItem(self.vline_ref)
-        # ###self.pw.removeItem(self.vline_target)
+        print 'not used for the moment'
 
     # class methods for spectrum control
     def update_count_time(self):
@@ -762,7 +736,7 @@ class Window(QtGui.QMainWindow):
     # class methods for plot control
     def show_curve_cbtn_clicked(self):
         if self.show_curve_cbtn.isChecked():
-            self.pw.addItem(self.fit_data)#, ignoreBounds=True)
+            self.pw.addItem(self.fit_data)
         else:
             self.pw.removeItem(self.fit_data)
 
@@ -800,11 +774,13 @@ class Window(QtGui.QMainWindow):
 
     def show_target_p_lambda_changed(self):
         target_lambda = float(self.show_target_p_lambda.text())
+        self.show_target_p_lambda.setText('%.3f' % target_lambda)
         self.vline_target.setX(target_lambda)
         self.calculate_target_pressure(target_lambda)
 
     def show_target_p_pressure_changed(self):
         target_pressure = float(self.show_target_p_pressure.text())
+        self.show_target_p_pressure.setText('%.2f' % target_pressure)
         target_lambda = core.lambda_0_t_user * ((target_pressure * core.beta / core.alpha + 1) ** (1 / core.beta))
         self.vline_target.setX(target_lambda)
         self.show_target_p_lambda.setText('%.3f' % target_lambda)
@@ -812,6 +788,7 @@ class Window(QtGui.QMainWindow):
 
     def show_target_p_delta_changed(self):
         delta_p = float(self.show_target_p_delta.text())
+        self.show_target_p_delta.setText('%.2f' % delta_p)
         fit_p = float(self.pressure_fit_display.text())
         target_p = fit_p + delta_p
         self.show_target_p_pressure.setText('%.2f' % target_p)
@@ -878,12 +855,6 @@ class Window(QtGui.QMainWindow):
         calculate_pressure(core.lambda_r1)
         self.calculate_target_p_lambda()
 
-    def define_p_reference(self):
-        self.show_ref_p_lambda.setText('%.3f' % core.lambda_r1)
-        self.show_ref_p_pressure.setText('%.3f' % core.pressure)
-        self.vline_ref.setValue(core.lambda_r1)
-        self.calculate_deltas()
-
     # class methods for tabs
     def set_lambda_naught(self, source):
         if source == 'manual':
@@ -910,7 +881,7 @@ class Window(QtGui.QMainWindow):
             calibration = 'Mao'
             a = 1904
             b = 7.665
-        elif index == 2:
+        else:
             calibration = 'Dewaele'
             a = 1904
             b = 9.5
@@ -975,12 +946,15 @@ class Window(QtGui.QMainWindow):
         if not conn:
             self.epics_drop.setCurrentIndex(0)
 
+    # ###THREAD CALLBACK METHODS### #
     def data_set(self, data_dict):
         if int(data_dict['remaining_time']) == 0:
+            self.remaining_time_display.setStyleSheet('')
             self.remaining_time_display.setText('Idle')
             self.take_n_spec_btn.setChecked(False)
         else:
             core.ys = data_dict['raw_y']
+            self.remaining_time_display.setStyleSheet('background-color: green; color: yellow')
             remaining_time = str(int(data_dict['remaining_time']))
             self.remaining_time_display.setText(remaining_time)
             update()
@@ -988,14 +962,12 @@ class Window(QtGui.QMainWindow):
     def fit_set(self, fit_dict):
         warning = fit_dict['warning']
         if not warning == '':
+            self.fit_warning_display.setStyleSheet('background-color: red; color: yellow')
             fitted_list = [self.show_curve_cbtn, self.show_r1r2_cbtn, self.show_bg_cbtn]
             for each in fitted_list:
                 if each.isChecked():
                     each.click()
         else:
-            print 'all good'
-            if not self.show_curve_cbtn.isChecked():
-                self.show_curve_cbtn.click()
             popt = fit_dict['popt']
             self.lambda_r1_display.setText('%.3f' % popt[5])
             self.fit_data.setData(core.xs_roi, double_pseudo(core.xs_roi, *popt))
@@ -1006,16 +978,12 @@ class Window(QtGui.QMainWindow):
             core.lambda_r1 = popt[5]
             calculate_pressure(core.lambda_r1)
             self.vline_press.setPos(popt[5])
+            if not self.show_curve_cbtn.isChecked():
+                self.show_curve_cbtn.click()
+            if not self.show_fit_p_cbtn.isChecked():
+                self.show_fit_p_cbtn.click()
+            self.fit_warning_display.setStyleSheet('')
         self.fit_warning_display.setText(warning)
-
-
-
-
-
-
-
-
-
 
 
 class CoreData:
@@ -1044,7 +1012,6 @@ class CoreData:
         self.threshold = 1000
         self.warning = ''
 
-
         # initial focusing time
         self.duration = 300
 
@@ -1065,7 +1032,7 @@ class CustomViewBox(pg.ViewBox):
         pg.ViewBox.__init__(self, *args, **kwds)
         self.setMouseMode(self.RectMode)
 
-    ## reimplement right-click to zoom out
+    # reimplement right-click to zoom roi
     def mouseClickEvent(self, ev):
         if ev.button() == QtCore.Qt.RightButton:
             self.zoom_roi()
@@ -1170,12 +1137,7 @@ class FitThread(QtCore.QThread):
 def update():
     # take current intesities and plot them
     # Set up y scaling options
-    y_scaling = gui.scale_y_btn_grp.checkedId()
-    if y_scaling == 0:
-        vb.enableAutoRange(axis=vb.YAxis)
-    elif y_scaling == 2:
-        vb.disableAutoRange()
-    else:
+    if gui.scale_y_btn_grp.checkedId() == 1:
         viewable = vb.viewRange()
         left_index = np.abs(core.xs-viewable[0][0]).argmin()
         right_index = np.abs(core.xs-viewable[0][1]).argmin()
@@ -1183,6 +1145,8 @@ def update():
         view_max = core.ys[left_index:right_index].max()
         if view_max > viewable[1][1]:
             vb.setRange(yRange=(view_min, view_max))
+        if view_min < viewable[1][0]:
+            vb.setRange(yRange=(view_min, viewable[1][1]))
     # y scaling done, ready to assign new data to curve
     gui.raw_data.setData(core.xs, core.ys)
     if gui.fit_n_spec_btn.isChecked():
@@ -1225,11 +1189,10 @@ def recall_lambda_naught():
 
 
 app = QtGui.QApplication(sys.argv)
-vb = CustomViewBox()
 core = CoreData()
+vb = CustomViewBox()
 gui = Window()
 pg.setConfigOptions(antialias=True)
-# vb.zoom_roi()
 update()
 recall_lambda_naught()
 sys.exit(app.exec_())
