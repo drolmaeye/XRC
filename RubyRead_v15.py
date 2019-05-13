@@ -2,6 +2,8 @@ __author__ = 'j.smith'
 
 '''
 A GUI for measuring ruby pressure with Ocean Optics spectrometer
+
+build command for pyinstaller: pyinstaller -F --add-binary "ca.dll'." RubyRead_vXX.py
 '''
 
 # import necessary modules
@@ -25,7 +27,7 @@ class Window(QtGui.QMainWindow):
         # use QMainWindow in this early version to benefit from menu, tool bar, etc.
         super(Window, self).__init__()
         self.setGeometry(100, 100, 1080, 720)
-        self.setWindowTitle('RubyRead')
+        self.setWindowTitle('RubyRead v0')
         self.setWindowIcon(QtGui.QIcon('ruby4.png'))
         # self.setStyleSheet('font-size: 10pt')
 
@@ -53,6 +55,10 @@ class Window(QtGui.QMainWindow):
         self.options_window_action.setShortcut('Ctrl+O')
         self.options_window_action.triggered.connect(lambda: self.ow.show())
 
+        self.about_window_action = QtGui.QAction('About', self)
+        self.about_window_action.setShortcut('Ctrl+A')
+        self.about_window_action.triggered.connect(lambda: self.aw.show())
+
         # make menu, add headings, put actions under headings
         self.main_menu = self.menuBar()
         self.file_menu = self.main_menu.addMenu('File')
@@ -60,6 +66,8 @@ class Window(QtGui.QMainWindow):
         self.file_menu.addAction(self.close_rubyread_action)
         self.options_menu = self.main_menu.addMenu('Options')
         self.options_menu.addAction(self.options_window_action)
+        self.about_menu = self.main_menu.addMenu('About')
+        self.about_menu.addAction(self.about_window_action)
 
         '''
         Custom Toolbar
@@ -130,8 +138,8 @@ class Window(QtGui.QMainWindow):
         self.tb_layout.addWidget(self.threshold_min_input)
         self.tb_layout.addSpacing(20)
 
-        self.tb_layout.addWidget(self.test_9000_btn)
-        self.tb_layout.addWidget(self.test_9999_btn)
+        # self.tb_layout.addWidget(self.test_9000_btn)
+        # self.tb_layout.addWidget(self.test_9999_btn)
 
         # add custom toolbar to main window
         self.mw_layout.addWidget(self.tb)
@@ -145,11 +153,12 @@ class Window(QtGui.QMainWindow):
         self.pw = pg.PlotWidget(viewBox=vb, name='Plot1')
 
         # ###EXPERIMENT WITH STYLE###
-        self.pw.setTitle('Spectrum', size='12pt')
+        # self.pw.setTitle('Spectrum', size='12pt')
         # label_style = {'color': '#808080', 'font-size': '11px'}
+        label_style = {'color': '#808080', 'font': ' bold 16px'}
         self.pw.plotItem.getAxis('left').enableAutoSIPrefix(False)
-        self.pw.setLabel('left', 'Intensity', units='counts')#, **label_style)
-        self.pw.setLabel('bottom', 'Wavelength', units='nm')
+        self.pw.setLabel('left', 'Intensity', units='counts', **label_style)
+        self.pw.setLabel('bottom', 'Wavelength', units='nm', **label_style)
 
         # create plot items (need to be added when necessary)
         self.raw_data = pg.PlotDataItem(name='raw and cooked')
@@ -221,6 +230,7 @@ class Window(QtGui.QMainWindow):
         self.count_time_label = QtGui.QLabel('Integration time (ms)')
         # create, configure count time input
         self.count_time_input = QtGui.QLineEdit('100')
+        self.count_time_input.setStyleSheet('font: bold 18px')
         self.count_time_input.setValidator(QtGui.QIntValidator())
         self.count_time_input.setMaxLength(4)
         # crate count time shortcut buttons
@@ -424,7 +434,7 @@ class Window(QtGui.QMainWindow):
 
         # create pressure control widgets
         self.press_calibration_label = QtGui.QLabel('Calibration')
-        self.press_calibration_display = QtGui.QLabel('Dorogokupets')
+        self.press_calibration_display = QtGui.QLabel('Dorogokupets and Oganov (2007)')
         self.lambda_naught_295_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(295)' + ' (nm)')
         self.lambda_naught_295_display = QtGui.QLabel('694.260')
         self.lambda_naught_t_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(T)' + ' (nm)')
@@ -451,7 +461,7 @@ class Window(QtGui.QMainWindow):
 
         # add pressure control widgets to pressure control layout
         self.press_control_layout.addWidget(self.press_calibration_label, 0, 0)
-        self.press_control_layout.addWidget(self.press_calibration_display, 0, 1)
+        self.press_control_layout.addWidget(self.press_calibration_display, 0, 1, 1, 2)
         self.press_control_layout.addWidget(self.lambda_naught_295_label, 1, 0)
         self.press_control_layout.addWidget(self.lambda_naught_295_display, 1, 1)
         self.press_control_layout.addWidget(self.lambda_naught_t_label, 2, 0)
@@ -469,6 +479,7 @@ class Window(QtGui.QMainWindow):
         '''
 
         self.ow = QtGui.QTabWidget()
+        self.ow.setWindowTitle('Options')
 
         # ###PRESSURE CALIBRATION###
         # make pressure calibration tab
@@ -484,8 +495,9 @@ class Window(QtGui.QMainWindow):
         self.set_lambda_naught_gb.setLayout(self.set_lambda_naught_gb_layout)
 
         # make widgets for lambda naught
-        self.manual_lambda_naught_label = QtGui.QLabel('Enter user-defined ' + u'\u03BB' + '<sub>0</sub>' + '(295) here')
+        self.manual_lambda_naught_label = QtGui.QLabel('Enter user-defined ' + u'\u03BB' + '<sub>0</sub>' + '(295)')
         self.manual_lambda_naught_input = QtGui.QLineEdit('694.260')
+        self.manual_lambda_naught_input.setValidator(QtGui.QDoubleValidator(692.000, 696.000, 3))
         self.auto_lambda_naught_btn = QtGui.QPushButton('Get ' + u'\u03BB' + '(295) from fit')
 
         # connect signals
@@ -509,13 +521,18 @@ class Window(QtGui.QMainWindow):
 
         # make widgets for calibration selection
         self.choose_calibration_drop = QtGui.QComboBox()
-        self.choose_calibration_drop.addItems(['Dorogokupets', 'Mao', 'Dewaele'])
-        self.p_calibration_alpha_label = QtGui.QLabel(u'\u03B1')
+        self.choose_calibration_drop.addItems(['Dorogokupets and Oganov, PRB 75, 024115 (2007)',
+                                               'Mao et al., JGR 91, 4673 (1986)',
+                                               'Dewaele et al., PRB 69, 092106 (2004)'])
+        self.p_calibration_alpha_label = QtGui.QLabel('<i>A</i> =')
+        self.p_calibration_alpha_label.setAlignment(QtCore.Qt.AlignRight)
         self.p_calibration_alpha_display = QtGui.QLabel('1885')
-        self.p_calibration_beta_label = QtGui.QLabel(u'\u03B2')
+        self.p_calibration_beta_label = QtGui.QLabel('<i>B</i> =')
+        self.p_calibration_beta_label.setAlignment(QtCore.Qt.AlignRight)
         self.p_calibration_beta_display = QtGui.QLabel('11.0')
-        self.calculation_label = QtGui.QLabel('P = ' + u'\u03B1' + '/' + u'\u03B2' + '[(' + u'\u03BB' + '/' + u'\u03BB' + '<sub>0</sub>)<sup>' + u'\u03B2' + '</sup> - 1]')
-        self.calculation_label.setStyleSheet('font-size: 20pt; font-weight: bold')
+        # ###self.calculation_label = QtGui.QLabel('P = ' + u'\u03B1' + '/' + u'\u03B2' + '[(' + u'\u03BB' + '/' + u'\u03BB' + '<sub>0</sub>)<sup>' + u'\u03B2' + '</sup> - 1]')
+        self.calculation_label = QtGui.QLabel('<i>P</i> = <i>A/B</i> [(' + u'\u03BB' + '/' + u'\u03BB' + '<sub>0</sub>)<sup><i>B</i></sup> - 1]')
+        self.calculation_label.setStyleSheet('font-size: 16pt; font-weight: bold')
         self.calculation_label.setAlignment(QtCore.Qt.AlignCenter)
 
         # connect signal
@@ -632,6 +649,20 @@ class Window(QtGui.QMainWindow):
         self.epics_tab_layout.addLayout(self.epics_tab_connection_layout)
 
         self.ow.addTab(self.epics_tab, 'EPICS')
+
+        '''
+        About window
+        '''
+
+        self.aw = QtGui.QWidget()
+        self.aw.setWindowTitle('About')
+        self.aw_layout = QtGui.QVBoxLayout()
+        self.aw.setLayout(self.aw_layout)
+
+        self.owner_label = QtGui.QLabel('RubyRead developed by HPCAT\n'
+                                        'Python 2.7 (32-bit), PyQt4, PyQtGraph 0.10\n'
+                                        'Internal test version built 13 May 2019')
+        self.aw_layout.addWidget(self.owner_label)
 
         # from Clemens' Dioptas
         # file = open(os.path.join("stylesheet.qss"))
@@ -874,15 +905,15 @@ class Window(QtGui.QMainWindow):
     def set_new_p_calibration(self):
         index = self.choose_calibration_drop.currentIndex()
         if index == 0:
-            calibration = 'Dorogokupets'
+            calibration = 'Dorogokupets and Oganov (2007)'
             a = 1885
             b = 11.0
         elif index == 1:
-            calibration = 'Mao'
+            calibration = 'Mao et al. (1986)'
             a = 1904
             b = 7.665
         else:
-            calibration = 'Dewaele'
+            calibration = 'Dewaele et al. (2004)'
             a = 1904
             b = 9.5
         self.press_calibration_display.setText(calibration)
