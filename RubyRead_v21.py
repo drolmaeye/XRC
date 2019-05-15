@@ -43,6 +43,10 @@ class Window(QtGui.QMainWindow):
         '''
 
         # actions
+        self.load_data_action = QtGui.QAction('Load', self)
+        self.load_data_action.setShortcut('Ctrl+L')
+        self.load_data_action.triggered.connect(self.load_data)
+
         self.save_data_action = QtGui.QAction('Save', self)
         self.save_data_action.setShortcut('Ctrl+S')
         self.save_data_action.triggered.connect(self.save_data)
@@ -62,6 +66,7 @@ class Window(QtGui.QMainWindow):
         # make menu, add headings, put actions under headings
         self.main_menu = self.menuBar()
         self.file_menu = self.main_menu.addMenu('File')
+        self.file_menu.addAction(self.load_data_action)
         self.file_menu.addAction(self.save_data_action)
         self.file_menu.addAction(self.close_rubyread_action)
         self.options_menu = self.main_menu.addMenu('Options')
@@ -82,7 +87,11 @@ class Window(QtGui.QMainWindow):
         # make custom toolbar widgets
         self.take_spec_label = QtGui.QLabel('Collect')
         self.take_one_spec_btn = QtGui.QPushButton('1')
+        self.take_one_spec_btn.setShortcut(QtCore.Qt.Key_F1)
+        self.take_one_spec_btn.setToolTip('Collect one spectrum (F1)')
         self.take_n_spec_btn = QtGui.QPushButton('n')
+        self.take_n_spec_btn.setShortcut(QtCore.Qt.Key_F2)
+        self.take_n_spec_btn.setToolTip('Continuously collect spectra (F2)')
         self.take_n_spec_btn.setCheckable(True)
 
         self.remaining_time_display = QtGui.QLabel('Idle')
@@ -90,10 +99,15 @@ class Window(QtGui.QMainWindow):
         self.remaining_time_display.setFrameShadow(QtGui.QFrame.Sunken)
         self.remaining_time_display.setMinimumWidth(80)
         self.remaining_time_display.setAlignment(QtCore.Qt.AlignCenter)
+        self.remaining_time_display.setToolTip('Remaining collection time (s)')
 
         self.fit_spec_label = QtGui.QLabel('Fit')
         self.fit_one_spec_btn = QtGui.QPushButton('1')
+        self.fit_one_spec_btn.setShortcut(QtCore.Qt.Key_F3)
+        self.fit_one_spec_btn.setToolTip('Fit one spectrum (F3)')
         self.fit_n_spec_btn = QtGui.QPushButton('n')
+        self.fit_n_spec_btn.setShortcut(QtCore.Qt.Key_F4)
+        self.fit_n_spec_btn.setToolTip('Continuously fit spectra (F4)')
         self.fit_n_spec_btn.setCheckable(True)
 
         self.fit_warning_display = QtGui.QLabel('')
@@ -101,6 +115,7 @@ class Window(QtGui.QMainWindow):
         self.fit_warning_display.setFrameShadow(QtGui.QFrame.Sunken)
         self.fit_warning_display.setMinimumWidth(80)
         self.fit_warning_display.setAlignment(QtCore.Qt.AlignCenter)
+        self.fit_warning_display.setToolTip('Fit warning')
 
         self.threshold_label = QtGui.QLabel('Fit threshold')
         self.threshold_min_input = QtGui.QSpinBox()
@@ -138,7 +153,7 @@ class Window(QtGui.QMainWindow):
         self.tb_layout.addWidget(self.threshold_min_input)
         self.tb_layout.addSpacing(20)
 
-        # self.tb_layout.addWidget(self.test_9000_btn)
+        self.tb_layout.addWidget(self.test_9000_btn)
         # self.tb_layout.addWidget(self.test_9999_btn)
 
         # add custom toolbar to main window
@@ -161,11 +176,11 @@ class Window(QtGui.QMainWindow):
         self.pw.setLabel('bottom', 'Wavelength', units='nm', **label_style)
 
         # create plot items (need to be added when necessary)
-        self.raw_data = pg.PlotDataItem(name='raw and cooked')
-        self.fit_data = pg.PlotDataItem()
-        self.r1_data = pg.PlotDataItem()
-        self.r2_data = pg.PlotDataItem()
-        self.bg_data = pg.PlotDataItem()
+        self.raw_data = pg.PlotDataItem(name='raw')
+        self.fit_data = pg.PlotDataItem(name='fit')
+        self.r1_data = pg.PlotDataItem(name='r1')
+        self.r2_data = pg.PlotDataItem(name='r2')
+        self.bg_data = pg.PlotDataItem(name='bg')
 
         # stylize plot items
         self.fit_data.setPen(color='r', width=2)
@@ -677,12 +692,27 @@ class Window(QtGui.QMainWindow):
         self.fit_thread = FitThread(self)
         self.fit_thread.fit_thread_callback_signal.connect(self.fit_set)
 
-        self.show()
+        # self.show()
         self.temperature_pv = []
 
     '''
     Class methods
     '''
+
+    def load_data(self):
+        if self.collect_thread.go:
+            msg = QtGui.QMessageBox.warning(self, 'Unable to load data', 'You must stop continuous data collection before attempting to load data')
+            return
+        name = str(QtGui.QFileDialog.getOpenFileName(self, 'Open file', filter='*.csv'))
+        xs, ys = np.genfromtxt(name,
+                               delimiter=',',
+                               skip_header=1,
+                               filling_values=1,
+                               usecols=(0, 1),
+                               unpack=True)
+        core.xs = xs
+        core.ys = ys
+        update()
 
     def save_data(self):
         scene = self.raw_data.scene()
@@ -690,6 +720,10 @@ class Window(QtGui.QMainWindow):
         self.dialog_window.show(self.raw_data)
 
     def closeEvent(self, *args, **kwargs):
+        if self.collect_thread.go:
+            self.collect_thread.stop()
+        while self.collect_thread.isRunning():
+            time.sleep(0.01)
         app.closeAllWindows()
         sys.exit()
 
@@ -731,7 +765,8 @@ class Window(QtGui.QMainWindow):
         core.threshold = self.threshold_min_input.value()
 
     def test_9000(self):
-        print 'not used for the moment'
+        print core.spec.serial_number, core.devices
+        print type(core.spec.serial_number)
 
     def test_9999(self):
         print 'not used for the moment'
@@ -1020,8 +1055,14 @@ class Window(QtGui.QMainWindow):
 class CoreData:
     def __init__(self):
         # get spectrometer going
+        spec_list = ['HR+C0308', 'banana']
         self.devices = sb.list_devices()
         self.spec = sb.Spectrometer(self.devices[0])
+        if self.spec.serial_number in spec_list:
+            print 'okay to run'
+        else:
+            print 'you done messed up'
+            sys.exit()
         self.spec.integration_time_micros(100000)
 
         # initial real and dummy spectra
@@ -1224,6 +1265,7 @@ core = CoreData()
 vb = CustomViewBox()
 gui = Window()
 pg.setConfigOptions(antialias=True)
+gui.show()
 update()
 recall_lambda_naught()
 sys.exit(app.exec_())
