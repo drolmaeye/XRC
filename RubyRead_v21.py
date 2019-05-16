@@ -1055,13 +1055,12 @@ class Window(QtGui.QMainWindow):
 class CoreData:
     def __init__(self):
         # get spectrometer going
-        spec_list = ['HR+C0308', 'banana']
+        spec_list = ['HR+C0308', 'HR+C0996', 'HR+D1333', 'HR+C2429', 'HR+C0614']
         self.devices = sb.list_devices()
         self.spec = sb.Spectrometer(self.devices[0])
-        if self.spec.serial_number in spec_list:
-            print 'okay to run'
-        else:
-            print 'you done messed up'
+        if self.spec.serial_number not in spec_list:
+            widget = QtGui.QWidget()
+            msg = QtGui.QMessageBox.warning(widget, 'Spectrometer not recognized', 'The serial number of your spectrometer is not recognized.\nContact HPCAT staff to add your spectrometer to the list of approved devices.')
             sys.exit()
         self.spec.integration_time_micros(100000)
 
