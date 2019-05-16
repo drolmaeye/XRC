@@ -1134,6 +1134,8 @@ class CollectThread(QtCore.QThread):
         self.go = True
         data_dict = {'remaining_time': '', 'raw_y': ''}
         start_time = time.clock()
+        # temporary counter test
+        cycles = 0
         while self.go:
             # get the spectrum
             intensities = core.spec.intensities()
@@ -1152,6 +1154,11 @@ class CollectThread(QtCore.QThread):
             # check if it's time to stop
             if not remaining_time > 0:
                 self.stop()
+            # temporary timing test
+            cycles += 1
+            elapsed = time.clock() - start_time
+            rate = cycles / elapsed
+            print rate
         data_dict['remaining_time'] = 0
         self.collect_thread_callback_signal.emit(data_dict)
 
