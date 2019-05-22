@@ -153,7 +153,7 @@ class Window(QtGui.QMainWindow):
         self.tb_layout.addWidget(self.threshold_min_input)
         self.tb_layout.addSpacing(20)
 
-        self.tb_layout.addWidget(self.test_9000_btn)
+        # self.tb_layout.addWidget(self.test_9000_btn)
         # self.tb_layout.addWidget(self.test_9999_btn)
 
         # add custom toolbar to main window
@@ -676,7 +676,7 @@ class Window(QtGui.QMainWindow):
 
         self.owner_label = QtGui.QLabel('RubyRead developed by HPCAT\n'
                                         'Python 2.7 (32-bit), PyQt4, PyQtGraph 0.10\n'
-                                        'Internal test version built 13 May 2019')
+                                        'Beta version built 22 May 2019')
         self.aw_layout.addWidget(self.owner_label)
 
         # from Clemens' Dioptas
