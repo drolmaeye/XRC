@@ -27,7 +27,7 @@ class Window(QtGui.QMainWindow):
         # use QMainWindow in this early version to benefit from menu, tool bar, etc.
         super(Window, self).__init__()
         self.setGeometry(100, 100, 1080, 720)
-        self.setWindowTitle('RubyRead v0')
+        self.setWindowTitle('RubyRead beta')
         self.setWindowIcon(QtGui.QIcon('ruby4.png'))
         # self.setStyleSheet('font-size: 10pt')
 
