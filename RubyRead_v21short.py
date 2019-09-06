@@ -4,7 +4,6 @@ __author__ = 'j.smith'
 A GUI for measuring ruby pressure with Ocean Optics spectrometer
 
 build command for pyinstaller: pyinstaller -F --add-binary "ca.dll'." RubyRead_vXX.py
-                                                   or try: "ca.dll;ca.dll"
 '''
 
 # import necessary modules
@@ -27,10 +26,10 @@ class Window(QtGui.QMainWindow):
     def __init__(self):
         # use QMainWindow in this early version to benefit from menu, tool bar, etc.
         super(Window, self).__init__()
-        self.setGeometry(100, 100, 1080, 720)
+        self.setGeometry(100, 100, 1080, 400)
         self.setWindowTitle('RubyRead beta')
         self.setWindowIcon(QtGui.QIcon('ruby4.png'))
-        # self.setStyleSheet('font-size: 10pt')
+        self.setStyleSheet('font-size: 8pt')
 
         # create the main window widget and make it central
         self.mw = QtGui.QWidget()
@@ -233,7 +232,7 @@ class Window(QtGui.QMainWindow):
         self.spec_control = QtGui.QGroupBox()
         self.spec_control.setTitle('Spectrum Control')
         self.cw_layout.addWidget(self.spec_control)
-        self.cw_layout.addSpacing(10)
+        # self.cw_layout.addSpacing(10)
 
         # make and set layout to Spectrum Control QGroupBox
         self.spec_control_layout = QtGui.QVBoxLayout()
@@ -246,7 +245,7 @@ class Window(QtGui.QMainWindow):
         self.count_time_label = QtGui.QLabel('Integration time (ms)')
         # create, configure count time input
         self.count_time_input = QtGui.QLineEdit('100')
-        self.count_time_input.setStyleSheet('font: bold 18px')
+        self.count_time_input.setStyleSheet('font: bold 14px')
         self.count_time_input.setValidator(QtGui.QIntValidator())
         self.count_time_input.setMaxLength(4)
         # crate count time shortcut buttons
@@ -280,7 +279,7 @@ class Window(QtGui.QMainWindow):
         self.count_time_layout.addWidget(self.count_more_button)
         self.spec_control_layout.addLayout(self.count_time_layout)
 
-        self.spec_control_layout.addSpacing(10)
+        # self.spec_control_layout.addSpacing(10)
 
         self.average_spec_layout = QtGui.QHBoxLayout()
         self.average_spec_layout.setAlignment(QtCore.Qt.AlignLeft)
@@ -296,7 +295,7 @@ class Window(QtGui.QMainWindow):
         self.plot_control = QtGui.QGroupBox()
         self.plot_control.setTitle('Plot Control')
         self.cw_layout.addWidget(self.plot_control)
-        self.cw_layout.addSpacing(10)
+        # self.cw_layout.addSpacing(10)
 
         # make and set primary layout for Plot Control QGroupBox
         self.plot_control_layout = QtGui.QVBoxLayout()
@@ -393,7 +392,7 @@ class Window(QtGui.QMainWindow):
         self.reference_curves_layout.addWidget(self.show_bg_cbtn)
         self.plot_control_layout.addLayout(self.reference_curves_layout)
 
-        self.plot_control_layout.addSpacing(10)
+        # self.plot_control_layout.addSpacing(10)
 
         self.plot_control_layout.addWidget(self.show_refs_label)
 
@@ -412,7 +411,7 @@ class Window(QtGui.QMainWindow):
         self.reference_lines_layout.addWidget(self.show_target_p_delta, 3, 3)
         self.plot_control_layout.addLayout(self.reference_lines_layout)
 
-        self.plot_control_layout.addSpacing(10)
+        # self.plot_control_layout.addSpacing(10)
 
         self.plot_control_layout.addWidget(self.set_ref_p_label)
 
@@ -422,7 +421,7 @@ class Window(QtGui.QMainWindow):
         self.set_reference_layout.addWidget(self.set_ref_from_target_btn)
         self.plot_control_layout.addLayout(self.set_reference_layout)
 
-        self.plot_control_layout.addSpacing(10)
+        # self.plot_control_layout.addSpacing(10)
 
         self.plot_control_layout.addWidget(self.set_y_scaling_label)
 
@@ -460,7 +459,7 @@ class Window(QtGui.QMainWindow):
         self.temperature_label = QtGui.QLabel('T(K)')
         self.temperature_label.setStyleSheet('QLabel {font: bold 18px}')
         self.temperature_input = QtGui.QSpinBox()
-        self.temperature_input.setStyleSheet('QSpinBox {font: bold 24px}')
+        self.temperature_input.setStyleSheet('QSpinBox {font: bold 14px}')
         self.temperature_input.setRange(4, 600)
         self.temperature_input.setValue(295)
         self.temperature_track_cbox = QtGui.QCheckBox('Track')
@@ -469,7 +468,7 @@ class Window(QtGui.QMainWindow):
         self.pressure_fit_label.setStyleSheet('QLabel {font: bold 18px}')
         self.pressure_fit_display = QtGui.QLabel('0.00')
         self.pressure_fit_display.setMinimumWidth(100)
-        self.pressure_fit_display.setStyleSheet('QLabel {font: bold 36px}')
+        self.pressure_fit_display.setStyleSheet('QLabel {font: bold 28px}')
 
 
         # connect pressure control signals
