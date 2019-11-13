@@ -28,7 +28,7 @@ class Window(QtGui.QMainWindow):
         # use QMainWindow in this early version to benefit from menu, tool bar, etc.
         super(Window, self).__init__()
         self.setGeometry(100, 100, 1080, 720)
-        self.setWindowTitle('RubyRead October 2019 build')
+        self.setWindowTitle('RubyRead November 2019 build')
         self.setWindowIcon(QtGui.QIcon('ruby4.png'))
         # self.setStyleSheet('font-size: 10pt')
 
@@ -461,7 +461,7 @@ class Window(QtGui.QMainWindow):
         self.temperature_label.setStyleSheet('QLabel {font: bold 18px}')
         self.temperature_input = QtGui.QSpinBox()
         self.temperature_input.setStyleSheet('QSpinBox {font: bold 24px}')
-        self.temperature_input.setRange(4, 600)
+        self.temperature_input.setRange(1, 600)
         self.temperature_input.setValue(295)
         self.temperature_track_cbox = QtGui.QCheckBox('Track')
         self.temperature_track_cbox.setEnabled(False)
@@ -1028,7 +1028,7 @@ class Window(QtGui.QMainWindow):
 
     def track_temperature_pv(self, value, **kwargs):
         if self.temperature_track_cbox.isChecked():
-            if 3 < value < 601:
+            if 0 < value < 601:
                 self.temperature_input.setValue(value)
 
     def epics_disconnect(self, conn, **kwargs):
@@ -1078,7 +1078,7 @@ class Window(QtGui.QMainWindow):
 class CoreData:
     def __init__(self):
         # get spectrometer going
-        spec_list = ['HR+C0308', 'HR+C0996', 'HR+D1333', 'HR+C2429', 'HR+C0614', 'HR+C2911', 'HR+C1514', 'HR+D2121']
+        spec_list = ['HR+C0308', 'HR+C0996', 'HR+D1333', 'HR+C2429', 'HR+C0614', 'HR+C2911', 'HR+C1514', 'HR+D2121', 'HR+C1923']
         self.devices = sb.list_devices()
         self.spec = sb.Spectrometer(self.devices[0])
         if self.spec.serial_number not in spec_list:
