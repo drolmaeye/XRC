@@ -1078,7 +1078,16 @@ class Window(QtGui.QMainWindow):
 class CoreData:
     def __init__(self):
         # get spectrometer going
-        spec_list = ['HR+C0308', 'HR+C0996', 'HR+D1333', 'HR+C2429', 'HR+C0614', 'HR+C2911', 'HR+C1514', 'HR+D2121', 'HR+C1923']
+        spec_list = ['HR+C0308',
+                     'HR+C0996',
+                     'HR+D1333',
+                     'HR+C2429',
+                     'HR+C0614',
+                     'HR+C2911',
+                     'HR+C1514',
+                     'HR+D2121',
+                     'HR+C1923',
+                     'HR+D0677']
         self.devices = sb.list_devices()
         self.spec = sb.Spectrometer(self.devices[0])
         if self.spec.serial_number not in spec_list:
