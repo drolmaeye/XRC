@@ -5,6 +5,8 @@ A GUI for measuring ruby pressure with Ocean Optics spectrometer
 
 build command for pyinstaller: pyinstaller -F --add-binary "ca.dll;." RubyRead_vXX.py
                                                    or try: "ca.dll;ca.dll"
+                                                   
+v23 file save                                                   
 '''
 
 # import necessary modules
