@@ -452,7 +452,7 @@ class Window(QtGui.QMainWindow):
 
         # create pressure control widgets
         self.press_calibration_label = QtGui.QLabel('Calibration')
-        self.press_calibration_display = QtGui.QLabel('Dorogokupets and Oganov (2007)')
+        self.press_calibration_display = QtGui.QLabel('Shen et al., HPR 40, 299 (2020)')
         self.lambda_naught_295_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(295)' + ' (nm)')
         self.lambda_naught_295_display = QtGui.QLabel('694.260')
         self.lambda_naught_t_label = QtGui.QLabel(u'\u03BB' + '<sub>0</sub>' + '(T)' + ' (nm)')
@@ -539,15 +539,16 @@ class Window(QtGui.QMainWindow):
 
         # make widgets for calibration selection
         self.choose_calibration_drop = QtGui.QComboBox()
-        self.choose_calibration_drop.addItems(['Dorogokupets and Oganov, PRB 75, 024115 (2007)',
+        self.choose_calibration_drop.addItems(['Shen et al., HPR 40, 299 (2020)',
+                                               'Dorogokupets and Oganov, PRB 75, 024115 (2007)',
                                                'Mao et al., JGR 91, 4673 (1986)',
                                                'Dewaele et al., PRB 69, 092106 (2004)'])
         self.p_calibration_alpha_label = QtGui.QLabel('<i>A</i> =')
         self.p_calibration_alpha_label.setAlignment(QtCore.Qt.AlignRight)
-        self.p_calibration_alpha_display = QtGui.QLabel('1885')
+        self.p_calibration_alpha_display = QtGui.QLabel('1870')
         self.p_calibration_beta_label = QtGui.QLabel('<i>B</i> =')
         self.p_calibration_beta_label.setAlignment(QtCore.Qt.AlignRight)
-        self.p_calibration_beta_display = QtGui.QLabel('11.0')
+        self.p_calibration_beta_display = QtGui.QLabel('10.69')
         # ###self.calculation_label = QtGui.QLabel('P = ' + u'\u03B1' + '/' + u'\u03B2' + '[(' + u'\u03BB' + '/' + u'\u03BB' + '<sub>0</sub>)<sup>' + u'\u03B2' + '</sup> - 1]')
         self.calculation_label = QtGui.QLabel('<i>P</i> = <i>A/B</i> [(' + u'\u03BB' + '/' + u'\u03BB' + '<sub>0</sub>)<sup><i>B</i></sup> - 1]')
         self.calculation_label.setStyleSheet('font-size: 16pt; font-weight: bold')
@@ -954,10 +955,14 @@ class Window(QtGui.QMainWindow):
     def set_new_p_calibration(self):
         index = self.choose_calibration_drop.currentIndex()
         if index == 0:
+            calibration = 'Shen et al., HPR 40, 299 (2020)'
+            a = 1870
+            b = 10.69
+        elif index == 1:
             calibration = 'Dorogokupets and Oganov (2007)'
             a = 1885
             b = 11.0
-        elif index == 1:
+        elif index == 2:
             calibration = 'Mao et al. (1986)'
             a = 1904
             b = 7.665
@@ -1101,6 +1106,7 @@ class CoreData:
 
         # initial real and dummy spectra
         self.xs = self.spec.wavelengths()
+        # ###self.xs = np.fromfunction(lambda x: 670.8577 + 0.10095*x - 0.000013261*x*x, (1044,), dtype=float)
         self.ys = self.spec.intensities()
 
         # initial fit boundaries
@@ -1131,6 +1137,9 @@ class CoreData:
         self.lambda_r1 = 694.260
         self.temperature = 295
         self.pressure = 0.00
+
+        ### October 2020 file save ###
+        self.index = 1
 
 
 class CustomViewBox(pg.ViewBox):
@@ -1257,6 +1266,22 @@ def update():
     gui.raw_data.setData(core.xs, core.ys)
     if gui.fit_n_spec_btn.isChecked():
         gui.fit_thread.start()
+    ### October 2020 tests for file saving ###
+    # binary_t0 = time.clock()
+    # np.savez('binary_file', x=core.xs, y=core.ys)
+    # print time.clock() - binary_t0
+    # ###text_t0 = time.clock()
+    # ###combined = np.column_stack((core.xs, core.ys))
+    # ###index = core.index
+    # ###core.index = index + 1
+    # ###prefix = 'C:\\TEMP\\Spectra\\txt_file_'
+    # ###filename = prefix + str(index).zfill(3) + '.csv'
+    # ###print filename
+    # ###np.savetxt(filename, X=combined, fmt=('%10.7f', '%.0f'), delimiter=',', header='amazing')
+    # ###print time.clock() - text_t0
+
+
+
 
 
 def calculate_pressure(lambda_r1):
